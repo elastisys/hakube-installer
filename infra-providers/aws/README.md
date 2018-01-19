@@ -67,3 +67,7 @@ These include:
     worker in the cluster definition.
   - `master_loadbalancer_fqdn`: needs to be set in the `masterLoadBalancerFQDN`
     field in the cluster definition.
+
+### Install Kubernetes
+Once all VMs have booted, it is time to run the installer (refer to
+the [README.md](../../README.md).
