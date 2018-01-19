@@ -1,0 +1,38 @@
+## start: docker.sh
+
+# For more information, see:
+# https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/#install-using-the-repository
+
+curl -sSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+
+# Docker should use the same cgroup driver as kubelet, and Docker should
+# also rotate container logs to prevent disks from filling up.
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "5"
+  }
+}
+EOF
+
+
+sudo apt-get update
+sudo apt-get install -y docker-ce={{ cluster["dockerVersion"] }}
+
+# verify installation
+sudo docker version
+
+# To use docker without sudo/root privileges, add user to docker group.
+whoami | xargs sudo usermod --append --groups docker
+
+## end: docker.sh

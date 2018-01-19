@@ -1,0 +1,61 @@
+#!/bin/bash
+
+set -e
+
+{% if cluster["hooks"]["preinstall"] %}
+{% include "hooks/preinstall/" + cluster["hooks"]["preinstall"] %}
+{% endif %}
+
+{% include "fragments/functions.sh.j2" %}
+
+{% include "fragments/sysadm-utils.sh.j2" %}
+
+log INFO "installing docker ..."
+{% include "fragments/docker.sh.j2" %}
+
+log INFO "installing kubeadm ..."
+{% include "fragments/kubeadm.sh.j2" %}
+
+# install ssh keys
+sudo tee /home/ubuntu/.ssh/id_rsa.pub > /dev/null <<EOF
+{% include cluster["sshKeysDir"] + "/" + worker_name + "_rsa.pub" %}
+EOF
+sudo tee /home/ubuntu/.ssh/id_rsa > /dev/null <<EOF
+{% include cluster["sshKeysDir"] + "/" + worker_name + "_rsa" %}
+EOF
+sudo chmod 600 /home/ubuntu/.ssh/id_rsa
+
+#
+# Run kubeadm
+#
+cat > kubeadm-config.yaml <<EOL
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: NodeConfiguration
+nodeName: {{ worker_name }}
+token: {{ cluster_token }}
+discoveryTokenUnsafeSkipCAVerification: true
+discoveryTokenAPIServers:
+{% if cluster.get("masterLoadBalancerIP") %}
+- {{ cluster["masterLoadBalancerIP"] }}:6443
+{% else %}
+- {{ cluster["masterLoadBalancerFQDN"] }}:6443
+{% endif %}
+EOL
+
+# will wait (indefinitely) for a master to become available
+sudo kubeadm join --config=kubeadm-config.yaml
+
+
+{% if cluster.get("masterLoadBalancerFQDN") %}
+#
+# since LB uses a FQDN != advertiseAddress, kube-proxy and kubelet needs
+# to connect to apiserver through the LB FQDN. the configmap that configures
+# the kube-proxy DaemonSet should already have been updated on master init.
+#
+# /etc/kubernetes/kubelet.conf may not be immediately present
+wait_for 60 [ -f /etc/kubernetes/kubelet.conf ]
+sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerFQDN"] }}:6443#g' /etc/kubernetes/kubelet.conf
+sudo systemctl restart kubelet
+{% endif %}
+
+log INFO "bootscript completed."

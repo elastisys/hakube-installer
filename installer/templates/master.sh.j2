@@ -1,0 +1,281 @@
+#!/bin/bash
+
+set -e
+
+{% if cluster["hooks"]["preinstall"] %}
+{% include "hooks/preinstall/" + cluster["hooks"]["preinstall"] %}
+{% endif %}
+
+{% include "fragments/functions.sh.j2" %}
+
+{% include "fragments/sysadm-utils.sh.j2" %}
+
+log INFO "installing docker ..."
+{% include "fragments/docker.sh.j2" %}
+
+log INFO "installing kubeadm ..."
+{% include "fragments/kubeadm.sh.j2" %}
+
+
+# install etcd root CA certificate
+sudo mkdir -p /etc/kubernetes/pki/etcd
+sudo tee /etc/kubernetes/pki/etcd/ca.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/ca.pem" %}
+EOF
+sudo tee /etc/kubernetes/pki/etcd/ca-key.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/ca-key.pem" %}
+EOF
+sudo chmod 600 /etc/kubernetes/pki/etcd/ca-key.pem
+
+sudo tee /etc/kubernetes/pki/etcd/client.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-client.pem" %}
+EOF
+sudo tee /etc/kubernetes/pki/etcd/client-key.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-client-key.pem" %}
+EOF
+sudo chown $(id -u):$(id -g) /etc/kubernetes/pki/etcd/client*
+sudo chmod 600 /etc/kubernetes/pki/etcd/client-key.pem
+
+sudo tee /etc/kubernetes/pki/etcd/peer.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-" + master_name + "-peer.pem" %}
+EOF
+sudo tee /etc/kubernetes/pki/etcd/peer-key.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-" + master_name + "-peer-key.pem" %}
+EOF
+sudo chmod 600 /etc/kubernetes/pki/etcd/peer-key.pem
+
+sudo tee /etc/kubernetes/pki/etcd/server.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-" + master_name + "-server.pem" %}
+EOF
+sudo tee /etc/kubernetes/pki/etcd/server-key.pem > /dev/null <<EOF
+{% include cluster["etcdPKIDir"] + "/etcd-" + master_name + "-server-key.pem" %}
+EOF
+sudo chmod 600 /etc/kubernetes/pki/etcd/server-key.pem
+
+# install ssh keys
+sudo tee /home/ubuntu/.ssh/id_rsa.pub > /dev/null <<EOF
+{% include cluster["sshKeysDir"] + "/" + master_name + "_rsa.pub" %}
+EOF
+sudo tee /home/ubuntu/.ssh/id_rsa > /dev/null <<EOF
+{% include cluster["sshKeysDir"] + "/" + master_name + "_rsa" %}
+EOF
+sudo chmod 600 /home/ubuntu/.ssh/id_rsa
+
+#
+# allow master peers ssh access
+#
+{% for master in cluster["masters"] %}
+tee -a /home/ubuntu/.ssh/authorized_keys > /dev/null <<EOF
+{% include cluster["sshKeysDir"] + "/" + master["nodeName"] + "_rsa.pub" %}
+EOF
+{% endfor %}
+
+# allow peers to ssh/scp as root
+sudo mkdir -p /root/.ssh
+cat /home/ubuntu/.ssh/authorized_keys | sudo tee -a /root/.ssh/authorized_keys > /dev/null
+
+
+#
+# Install and run etcd as a systemd unit
+#
+
+export ETCD_VERSION=v{{ cluster["etcdVersion"] }}
+curl -sSL https://github.com/coreos/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz | sudo tar -xzv --strip-components=1 -C /usr/local/bin/
+rm -rf etcd-$ETCD_VERSION-linux-amd64*
+
+sudo touch /etc/etcd.env
+sudo tee /etc/etcd.env <<EOF
+PEER_NAME={{ master["nodeName"] }}
+PRIVATE_IP={{ master["privateIP"] }}
+CLUSTER_PEERS={% for m in cluster["masters"] %}{{ "%s=https://%s:2380" | format(m["nodeName"], m["privateIP"]) }}{% if loop.nextitem is defined %},{% endif %}{% endfor %}
+EOF
+
+sudo tee /etc/systemd/system/etcd.service > /dev/null <<EOL
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos/etcd
+Conflicts=etcd.service
+Conflicts=etcd2.service
+
+[Service]
+EnvironmentFile=/etc/etcd.env
+Type=notify
+Restart=always
+RestartSec=5s
+LimitNOFILE=40000
+TimeoutStartSec=0
+
+ExecStart=/usr/local/bin/etcd --name \${PEER_NAME} \\
+     --data-dir /var/lib/etcd \\
+     --listen-client-urls https://\${PRIVATE_IP}:2379 \\
+     --advertise-client-urls https://\${PRIVATE_IP}:2379 \\
+     --listen-peer-urls https://\${PRIVATE_IP}:2380 \\
+     --initial-advertise-peer-urls https://\${PRIVATE_IP}:2380 \\
+     --cert-file=/etc/kubernetes/pki/etcd/server.pem \\
+     --key-file=/etc/kubernetes/pki/etcd/server-key.pem \\
+     --client-cert-auth \\
+     --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.pem \\
+     --peer-cert-file=/etc/kubernetes/pki/etcd/peer.pem \\
+     --peer-key-file=/etc/kubernetes/pki/etcd/peer-key.pem \\
+     --peer-client-cert-auth \\
+     --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.pem \\
+     --initial-cluster \${CLUSTER_PEERS} \\
+     --initial-cluster-token my-etcd-token \\
+     --initial-cluster-state new
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+sudo systemctl daemon-reload
+sudo systemctl enable etcd
+
+echo "starting etcd and waiting for other cluster members to join ..."
+sudo systemctl restart etcd
+
+#
+# wait for etcd cluster to form
+#
+# ensure etcdctl can communicate with the local etcd
+tee -a ~/.etcdrc > /dev/null <<EOF
+export ETCDCTL_API=3
+export ETCDCTL_ENDPOINTS={{ master["privateIP"] }}:2379
+export ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.pem
+export ETCDCTL_CERT=/etc/kubernetes/pki/etcd/client.pem
+export ETCDCTL_KEY=/etc/kubernetes/pki/etcd/client-key.pem
+EOF
+cat ~/.etcdrc >> ~/.bashrc
+. ~/.etcdrc
+until etcdctl member list; do
+    echo "waiting for etcd cluster to come up ..."
+    sleep 3
+done
+
+
+{% if master != cluster["masters"][0] %}
+# Wait for seed master to generate necessary certificates. This includes the
+# k8s ca cert, which must be used to sign kubeadm-generated apiserver certs.
+# https://github.com/kubernetes/kubeadm/blob/master/docs/design/design_v1.7.md
+#
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/ca.crt
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/ca.key
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/sa.key
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/sa.pub
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/front-proxy-ca.crt
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/front-proxy-ca.key
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/front-proxy-client.crt
+retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/front-proxy-client.key
+{% endif %}
+
+
+#
+# Run kubeadm
+#
+cat > kubeadm-config.yaml <<EOL
+apiVersion: kubeadm.k8s.io/v1alpha1
+kind: MasterConfiguration
+kubernetesVersion: v{{ cluster["kubernetesVersion"] }}
+token: {{ cluster_token }}
+# Never expire token
+tokenTTL: 0s
+api:
+{% if cluster.get("masterLoadBalancerIP") %}
+  advertiseAddress: {{ cluster["masterLoadBalancerIP"] }}
+{% else %}
+  {# apiserver cannot advertise a domain name #}
+  advertiseAddress: {{ master["privateIP"] }}
+{% endif %}
+etcd:
+  endpoints:
+    # only connect to local etcd server
+    - {{ "https://%s:2379" | format(master["privateIP"]) }}
+  caFile: /etc/kubernetes/pki/etcd/ca.pem
+  certFile: /etc/kubernetes/pki/etcd/client.pem
+  keyFile: /etc/kubernetes/pki/etcd/client-key.pem
+apiServerCertSANs:
+- 127.0.0.1
+- {{ master["privateIP"] }}
+{% if cluster.get("masterLoadBalancerIP") %}
+- {{ cluster["masterLoadBalancerIP"] }}
+{% else %}
+- {{ cluster["masterLoadBalancerFQDN"] }}
+{% endif %}
+{% if cluster["masterFQDN"] %}
+- {{ cluster["masterFQDN"] }}
+{% endif %}
+networking:
+  podSubnet: 10.32.0.0/12
+{% if cluster["hooks"].get("cloudProvider") %}
+cloudProvider: {{ cluster["hooks"]["cloudProvider"] }}
+{% endif %}
+apiServerExtraArgs:
+  endpoint-reconciler-type: lease
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+  cloud-config: /etc/kubernetes/cloud-config.json
+{% endif %}
+controllerManagerExtraArgs:
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+  cloud-config: /etc/kubernetes/cloud-config.json
+{% endif %}
+EOL
+
+sudo kubeadm init --config=kubeadm-config.yaml
+
+# kubadm marks the node a master by setting the appropriate label
+# (node-role.kubernetes.io/master="") and taint
+# (node-role.kubernetes.io/master:NoSchedule) but on reboot these
+# labels/taints have been observed to disappear. Therefore, we add
+# a systemd unit that runs on every boot that makes sure the node
+# gets marked as a master.
+sudo tee /etc/systemd/system/relabel-on-boot.service > /dev/null <<EOF
+{% include "fragments/relabel-on-boot.service.j2" %}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable relabel-on-boot
+
+
+#
+# Setup kubectl
+#
+
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+{% if cluster.get("masterLoadBalancerFQDN") %}
+#
+# since LB uses a FQDN != advertiseAddress, kube-proxy (in particular on
+# workers) need to connect to apiserver through the LB FQDN. the kube-proxy
+# DaemonSet reads its configuration from a configmap
+#
+kubectl get configmap -n kube-system kube-proxy -o yaml > kube-proxy.cm
+sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerFQDN"] }}:6443#g' kube-proxy.cm
+kubectl apply -f kube-proxy.cm --force
+# restart all kube-proxy pods to ensure that they load the new configmap
+kubectl delete pod -n kube-system -l k8s-app=kube-proxy
+{% endif %}
+
+# scale kube-dns to the number of masters running
+kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deployment/kube-dns
+
+#
+# Setup pod network
+#
+
+{% if master == cluster["masters"][0] %}
+log INFO "installing pod network ..."
+kubever=$(kubectl version | base64 | tr -d '\n')
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+
+# Set permissive RBAC permissions to all service accounts.
+# Rationale: our cluster is assumed to be operated by trusted people, who
+# should be able to deploy any services that use any kind of cluster resources.
+# RBAC permissions quickly get hairy (example, ingress-controller) and
+# unnecessarily complicates software deployment on the cluster.
+kubectl create clusterrolebinding serviceaccounts-cluster-admin \
+  --clusterrole=cluster-admin \
+  --group=system:serviceaccounts
+{% endif %}
+
+log INFO "bootscript completed."

@@ -1,0 +1,40 @@
+{
+    "masterFQDN":  "TODO: domain name (not necessary)",
+    "masterLoadBalancerFQDN": "TODO: ELB FQDN",
+    "sshLoginKey": "~/.ssh/id_rsa",
+    "masters": [
+        {
+            "nodeName": "ip-10-1-0-10.ec2.internal",
+            "privateIP": "10.1.0.10",
+            "publicIP": "TODO"
+        },
+        {
+            "nodeName": "ip-10-1-1-10.ec2.internal",
+            "privateIP": "10.1.1.10",
+            "publicIP": "TODO"
+        },
+        {
+            "nodeName": "ip-10-1-2-10.ec2.internal",
+            "privateIP": "10.1.2.10",
+            "publicIP": "TODO"
+        }
+    ],
+    "workers": [
+        {
+            "nodeName": "ip-10-1-0-40.ec2.internal",
+            "privateIP": "10.1.0.40",
+            "publicIP": "TODO"
+        },
+        {
+            "nodeName": "ip-10-1-1-40.ec2.internal",
+            "privateIP": "10.1.1.40",
+            "publicIP": "TODO"
+        }
+    ],
+
+    "hooks": {
+        "preinstall": "aws.sh.j2",
+        "cloudProvider": "aws",
+        "cloudProviderConfig": null
+    }
+}

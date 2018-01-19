@@ -1,0 +1,103 @@
+### start: functions.sh ###
+
+function log() {
+    level=$1
+    time=$(date +%Y-%m-%dT%H:%M:%S)
+    echo -e "${time} [${level}] ${@:2}"
+}
+
+function curl_post_json() {
+    curl -sSX POST --header "Content-Type: application/json" "$@"
+}
+
+function expect_output() {
+    actual_output="$1"
+    expected_output="$2"
+    error_msg="$3"
+
+    if [ "${actual_output}" != "${expected_output}" ]; then
+        echo "${actual_output}"
+        log error "${error_msg}"
+        exit 1
+    fi
+}
+
+function wait_for() {
+    timeout="${1}"
+
+    log info "waiting for command to succeed: ${@:2} ..."
+    for i in $(seq 0 ${timeout}); do
+        if eval "${@:2}"; then
+            return
+        fi
+        sleep 1
+    done
+
+    log error "error: wait timeout after ${timeout} seconds"
+    exit 1
+}
+
+function wait_for_pod_phase() {
+    timeout="${1}"
+    namespace="${2}"
+    selector="${3}"
+    phase="${4}"
+
+    log info "Waiting for '${selector}' in namespace '${namespace}' to enter" \
+             "phase '${phase}'"
+
+    wait_for ${timeout} "kubectl -n ${namespace} get po ${selector} -o yaml \
+                         | grep -q \"phase: ${phase}\""
+}
+
+# Prints time elapsed (in seconds) since a given time (in epoch seconds).
+function elapsed_since() {
+    # start time (seconds since epoch)
+    start="${1}"
+    now=$(date +%s)
+    echo $(( ${now} - ${start} ))
+}
+
+# Waits (for a maximum timeout in seconds) for a range of HTTP ports to be
+# reachable on the (local)host.
+function await_ports() {
+    timeout="${1}"
+    ports="${@:2}"
+
+    start=$(date +%s)
+    for port in ${ports}; do
+	while true; do
+	    elapsed=$(elapsed_since ${start})
+	    if (( ${elapsed} > ${timeout} )); then
+		log error "timeout (${timeout} s) exceeded. giving up ..."
+		exit 1
+	    fi
+
+	    log info "trying ${port} ..."
+	    exitcode=0
+            # prevent set -e from causing an exit
+            curl --silent http://localhost:${port} -o /dev/null || exitcode=$? && true
+	    if [ "${exitcode}" == "0" ]; then
+		log info "port ${port} appears up"
+		break
+	    fi
+	    sleep 2.0
+	done
+    done
+    log info "all ports appear up"
+}
+
+function retrying_scp() {
+    # [user@]host
+    host=${1}
+    file_path=${2}
+    echo "copying ${file_path} from ${host} ..."
+    sudo mkdir -p $(dirname ${file_path})
+    until sudo scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${host}:${file_path} ${file_path}; do
+       echo "waiting for file ${file_path} to appear on ${host} ..."
+       sleep 5;
+    done
+}
+
+
+### end: functions.sh ###

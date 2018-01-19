@@ -1,0 +1,8 @@
+[Unit]
+Description=Ensure master taint and label (node-role.kubernetes.io/master) gets re-set on every reboot
+
+[Service]
+ExecStart=/usr/bin/kubeadm alpha phase mark-master
+
+[Install]
+WantedBy=multi-user.target

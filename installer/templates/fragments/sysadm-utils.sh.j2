@@ -1,0 +1,20 @@
+### start: sysadm-utils.sh ###
+
+export DEBIAN_FRONTEND=noninteractive
+
+sudo apt-get update -qy
+
+# install software required to install other software
+sudo apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+
+# install useful system monitoring tools
+sudo apt-get install -y \
+  htop \
+  iftop \
+  bmon
+
+### end: sysadm-utils.sh ###

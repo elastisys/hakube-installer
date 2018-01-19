@@ -1,0 +1,12 @@
+[Service]
+{% set extra_args = ["--cgroup-driver=systemd"] %}
+
+{% if cluster["hooks"].get("cloudProvider") %}
+{% set extra_args = extra_args + ["--cloud-provider=" + cluster["hooks"]["cloudProvider"]] %}
+{% endif %}
+
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+{% set extra_args = extra_args + ["--cloud-config=/etc/kubernetes/cloud-config.json"] %}
+{% endif %}
+
+Environment="KUBELET_EXTRA_ARGS={{ extra_args | join(" ") }}"

@@ -1,0 +1,42 @@
+## start: kubeadm.sh
+
+# swap must be disabled for kubelet to work properly
+sudo swapoff -a
+
+#
+# Install kubeadm
+#
+# For more information, see:
+# https://kubernetes.io/docs/setup/independent/install-kubeadm/
+
+curl -sSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo add-apt-repository \
+   "deb http://apt.kubernetes.io/ \
+   kubernetes-$(lsb_release -cs) \
+   main"
+sudo apt-get update -y
+sudo apt-get install -y kubelet={{ cluster["kubernetesVersion"] }}-00 \
+                        kubeadm={{ cluster["kubernetesVersion"] }}-00 \
+                        kubectl={{ cluster["kubernetesVersion"] }}-00
+
+# Verify kubeadm installation
+kubeadm version
+
+# Pass additional arguments to kubelet
+sudo tee /etc/systemd/system/kubelet.service.d/20-extra-args.conf > /dev/null <<EOF
+{% include "fragments/kubelet-extra-args.conf.j2" %}
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+# Add cloud-provider config (if one is required by the cloudprovider)
+sudo tee /etc/kubernetes/cloud-config.json > /dev/null <<EOF
+{% include "hooks/cloudconfig/" + cluster["hooks"].get("cloudProviderConfig") %}
+EOF
+{% endif %}
+
+
+
+## end: kubeadm.sh

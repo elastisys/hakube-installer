@@ -1,0 +1,19 @@
+### start: aws preinstall-hook ###
+
+sudo apt-get update && sudo apt-get install -y curl
+
+#
+# We need to set the instance's hostname (such as `ip-10-1-0-12`)
+# to match the hostname as returned by the aws metadata service
+# (such as `ip-10-1-0-12.ec2.internal`) to prevent k8s from being
+# confused when a node tries to register itself.
+#
+# this is related to https://github.com/kubernetes/kubeadm/issues/330
+#
+ec2_hostname=$(curl 169.254.169.254/latest/meta-data/hostname)
+echo 127.0.0.1 ${ec2_hostname} | sudo tee -a /etc/hosts
+sudo hostname ${ec2_hostname}
+# make sure name change survives a reboot
+echo ${ec2_hostname} | sudo tee /etc/hostname
+
+### end: aws preinstall-hook ###

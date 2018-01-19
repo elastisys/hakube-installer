@@ -1,0 +1,75 @@
+# -*- mode: ruby -*-
+
+VAGRANTFILE_API_VERSION = "2"
+
+SSH_PUBLIC_KEY = File.join(ENV["HOME"], ".ssh/id_rsa.pub")
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu/xenial64"
+
+
+  # configure slightly larger than deafult (384MB) virtual boxes
+  config.vm.provider "virtualbox" do |v|
+    v.customize ["modifyvm", :id, "--memory", 2048]
+    # Fix for slow network
+    # https://github.com/hashicorp/vagrant/issues/1807
+    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+    v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+  end
+
+  # Insert user public ssh key
+  config.vm.provision "shell" do |s|
+    ssh_pub_key = File.readlines(SSH_PUBLIC_KEY).first.strip
+    s.inline = <<-SHELL
+      echo #{ssh_pub_key} >> /home/ubuntu/.ssh/authorized_keys
+    SHELL
+  end
+
+  config.vm.define "master-lb" do |lb|
+    lb.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "512"]
+    end
+    lb.vm.hostname = "master-lb"
+    lb.vm.network :private_network, ip: "10.2.0.100"
+    lb.vm.network :forwarded_port, guest: 6443, host: 6443
+    lb.vm.network :forwarded_port, guest: 6444, host: 6444
+    # make hostname -i must return a routable address
+    lb.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master-lb/10.2.0.100 master-lb/' -i /etc/hosts"
+    lb.vm.provision :shell, :path => "master-lb.sh", :args => []
+  end
+
+
+  config.vm.define "master0", primary: true do |master|
+    master.vm.hostname = "master0"
+    master.vm.network :private_network, ip: "10.2.0.10"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master0/10.2.0.10 master0/' -i /etc/hosts"
+  end
+
+  config.vm.define "master1" do |master|
+    master.vm.hostname = "master1"
+    master.vm.network :private_network, ip: "10.2.0.11"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master1/10.2.0.11 master1/' -i /etc/hosts"
+  end
+
+  config.vm.define "master2" do |master|
+    master.vm.hostname = "master2"
+    master.vm.network :private_network, ip: "10.2.0.12"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master2/10.2.0.12 master2/' -i /etc/hosts"
+  end
+
+  config.vm.define "worker0" do |worker|
+    worker.vm.hostname = "worker0"
+    worker.vm.network :private_network, ip: "10.2.0.20"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    worker.vm.provision :shell, :inline => "sed 's/127.0.0.1.*worker0/10.2.0.20 worker0/' -i /etc/hosts"
+  end
+
+end
