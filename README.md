@@ -14,9 +14,10 @@ pass small configuration fragments for such purposes.
 
 The installer script assumes that Ubuntu (16.04) servers on which to install
 Kubernetes have a already been provisioned. *Infrastructure providers* are used
-to create cloud infrastructure (such as servers). Some examples are available
-under [infra-providers](infra-providers). At the moment, two infrastructure
-providers are implemented:
+to create cloud infrastructure (such as servers and apiserver
+load-balancers). Some examples are available under
+[infra-providers](infra-providers). At the moment, two infrastructure providers
+are implemented:
 
   - an [AWS infra-provider](infra-providers/aws), which creates a cloud
     infrastructure via [Terraform](https://www.terraform.io/).
@@ -39,6 +40,36 @@ The general workflow is to
 0. After inspecting the boot scripts, use the installer to install the cluster
    by running the boot scripts (over SSH) against the master and workers
    declared in the cluster definition.
+
+
+## Quick start
+The simplest way to get started is to try out a HA cluster on your local machine.
+
+0. Follow the instructions
+   in [infra-providers/vagrant/README.md](infra-providers/vagrant/README.md) to
+   create a cluster of local VMs fronted by a HAProxy load-balancer.
+
+0. Prepare the installer
+
+         python3 -m venv .venv
+         source .venv/bin/activate
+         pip install -r requirements.txt
+
+0. Run the installer script using
+   the [vagrant-cluster.json](samples/vagrant-cluster.json).
+
+         # render cluster assets (certs, keys, bootscripts)
+         python -m installer render samples/vagrant-cluster.json
+         # install nodes over ssh
+         python -m installer install samples/vagrant-cluster.json
+
+0. Follow the post-installation step (see below) to run `kubectl` commands.
+
+Once you have familiarized yourself with the scripts, try it out on AWS using
+the [AWS infra-provider](infra-providers/aws/README.md). A cluster definition
+template is available under
+[samples/aws-cluster.json](samples/aws-cluster.json).
+
 
 
 ## Cluster definition
@@ -70,18 +101,18 @@ permitted by the json parser.**
     # 'ubuntu'.
     "sshLoginUser": "ubuntu",
     # (Optional) A private SSH login key to use when connecting to nodes.
-    # Can be override on a per-node basis (see below).
+    # Can be overridden on a per-node basis (see below).
     "sshLoginKey": "~/.ssh/id_rsa",
     # The list of master nodes in the cluster. A minimum of 3 masters is
     # required.
     "masters": [
         {
-		    # The node's name.
+            # The node's name.
             "nodeName": "ip-10-1-0-10.ec2.internal",
-			# The node's private IP. In some cases, this may be the same IP as
-			# the publicIP. Used for cluster-internal communication.
+            # The node's private IP. In some cases, this may be the same IP as
+            # the publicIP. Used for cluster-internal communication.
             "privateIP": "10.1.0.10",
-			# The node's public IP. Used to run boot scripts.
+            # The node's public IP. Used to run boot scripts.
             "publicIP": "35.168.152.188"
         },
         {
@@ -147,7 +178,7 @@ permitted by the json parser.**
         # A cloud-config to be used to configure the specified cloudprovider.
         # Some cloudproviders (aws) do not require a configuration file.
         # Assumed to be a fragment located under templates/hooks/cloudconfig/.
-		# Note: if AWS VMs have been properly set up, no config is needed.
+        # Note: if AWS VMs have been properly set up, no config is needed.
         "cloudProviderConfig": null
     }
 }
