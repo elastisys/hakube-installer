@@ -29,4 +29,4 @@ http://10.2.0.100:6444.
 
 ## Install Kubernetes
 Once all VMs have booted, it is time to run the installer (refer to
-the [README.md](../../README.md).
+the [README.md](../../README.md)).

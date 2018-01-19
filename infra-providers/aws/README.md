@@ -70,4 +70,4 @@ These include:
 
 ### Install Kubernetes
 Once all VMs have booted, it is time to run the installer (refer to
-the [README.md](../../README.md).
+the [README.md](../../README.md)).
