@@ -174,7 +174,7 @@ A couple of sample cluster definitions are available under [samples](samples).
 
         python3 -m venv .venv
         . .venv/bin/activate
-        pip3 install -r requirements.txt
+        pip install -r requirements.txt
 
 
 ## Render cluster assets
@@ -183,7 +183,7 @@ Render *cluster assets*. The cluster assets consists of secrets (cluster token,
 certificates, ssh keys) and boot scripts for each  master and worker. The assets
 are written to `assets/` by default (run `--help` for flags).
 
-        python3 -m installer render cluster.json
+        python -m installer render cluster.json
 
 You can skim through the generated assets to convince yourself that they are
 acceptable.
@@ -194,13 +194,13 @@ Use the installer to install the cluster by running the boot scripts (over SSH)
  against the master and workers declared in the cluster definition:
 
 
-        python3 -m installer install cluster.json
+        python -m installer install cluster.json
 
 By default all cluster machines are installed at once. One can also run the
 installer against a subset of the machines in the cluster definition. For
 example:
 
-        python3 -m installer install cluster.json ip-10-1-0-10.ec2.internal
+        python -m installer install cluster.json ip-10-1-0-10.ec2.internal
 
 This can be useful if something went wrong with a node or it needs to be updated
 or re-installed. Depending on the state of the node, it may be necessary to
