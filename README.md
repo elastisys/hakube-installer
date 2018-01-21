@@ -2,7 +2,10 @@
 This repository contains a
 [kubeadm](https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/)-based
 installer for a highly available Kubernetes cluster with a configurable number
-of master and worker nodes.
+of master and worker nodes. HA is on the roadmap for `kubeadm` and this script
+should be considered a workaround until `kubeadm` is HA-capable. This installer
+is largely based on
+[Creating HA clusters with kubeadm](https://deploy-preview-6458--kubernetes-io-master-staging.netlify.com/docs/setup/independent/high-availability/).
 
 The installer should run on any Linux system which meets the software
 prerequisites outlined below.
