@@ -91,7 +91,7 @@ CLUSTER_DEFAULTS = {
 
 
 class ClusterDefinition:
-    """A ClusterDefinition represents a cluster setup, from which cluster 
+    """A ClusterDefinition represents a cluster setup, from which cluster
     boot scripts can be `render`ed and `install`ed."""
 
     def __init__(self, path, assets_dir):
@@ -220,7 +220,15 @@ class ClusterDefinition:
         return self.masters() + self.workers()
 
     def get_nodes_by_name(self, node_names):
-        """Return a given set of node declarations by nodeName."""
+        """Return a given set of node declarations by nodeName.
+        A `ValueError` is raised if a given node name does not exist in the
+        cluster definition.
+        """
+        all_names = [n["nodeName"] for n in self.all_nodes()]
+        for node_name in node_names:
+            if not node_name in all_names:
+                raise ValueError("referenced node '{}' is undefined".format(
+                    node_name))
         return [n for n in self.all_nodes() if n["nodeName"] in node_names]
 
 
