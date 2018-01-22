@@ -93,7 +93,7 @@ function retrying_scp() {
     file_path=${2}
     echo "copying ${file_path} from ${host} ..."
     sudo mkdir -p $(dirname ${file_path})
-    until sudo scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${host}:${file_path} ${file_path}; do
+    until sudo scp -r -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${host}:${file_path} ${file_path}; do
        echo "waiting for file ${file_path} to appear on ${host} ..."
        sleep 5;
     done
