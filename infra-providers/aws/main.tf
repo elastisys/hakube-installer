@@ -672,23 +672,14 @@ resource "aws_instance" "workers" {
 
     key_name               = "${local.key_name}"
     vpc_security_group_ids = ["${aws_security_group.worker_sg.id}", "${aws_security_group.cluster_sg.id}"]
-  
     iam_instance_profile   = "${aws_iam_instance_profile.iam_profile.name}"
 
     # spread instances over available subnets
     subnet_id     = "${element(aws_subnet.subnets.*.id, count.index)}"
-    associate_public_ip_address = false
+    associate_public_ip_address = true
     private_ip = "${cidrhost(element(aws_subnet.subnets.*.cidr_block, count.index), var.worker_subnet_ip_start_index + (count.index / length(aws_subnet.subnets.*.id)) )}"
 
     tags = "${merge(local.cluster_tags, map("Name", "${local.worker_name_prefix}-${count.index}"))}"
-}
-
-# create elastic IP for workers (regular public IPs do not survive restarts)
-resource "aws_eip" "worker_eips" {
-    count = "${var.num_workers}"
-
-    instance = "${element(aws_instance.workers.*.id, count.index)}"
-    vpc      = true
 }
 
 #
@@ -704,7 +695,7 @@ output "master_private_ips" {
 }
 
 output "worker_public_ips" {
-    value = "${aws_eip.worker_eips.*.public_ip}"
+  value = "${aws_instance.workers.*.public_ip}"
 }
 
 output "worker_private_ips" {
