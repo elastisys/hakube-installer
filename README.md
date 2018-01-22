@@ -92,14 +92,8 @@ permitted by the json parser.**
     # It will be added as a subject alternate name to the generated master
     # certificates.
     "masterFQDN": "mykubeapi.elastisys.com",
-    # The IP address where the master load-balancer can be reached.
-    # Note: this option is mutually exclusive with masterLoadBalancerFQDN.
-    "masterLoadBalancerIP": null,
-    # The DNS name where the master load-balancer can be reached (in some
-    # cases, such as AWS ELB, the load-balancer is not assigned a single
-    # static IP address and in such cases a FQDN needs to be used).
-    # Note: this option is mutually exclusive with masterLoadBalancerFQDN.
-    "masterLoadBalancerFQDN": "mykube-master-lb-4c88cd5b9c8c3223.elb.us-east-1.amazonaws.com",
+    # The IP address or FQDN (DNS name) of the master load-balancer.
+    "masterLoadBalancerAddress": null,
     # (Optional) The username to use when logging in over SSH. Typically
     # 'ubuntu'.
     "sshLoginUser": "ubuntu",

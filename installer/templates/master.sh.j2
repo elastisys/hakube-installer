@@ -179,12 +179,10 @@ token: {{ cluster_token }}
 # Never expire token
 tokenTTL: 0s
 api:
-{% if cluster.get("masterLoadBalancerIP") %}
-  advertiseAddress: {{ cluster["masterLoadBalancerIP"] }}
-{% else %}
-  {# apiserver cannot advertise a domain name #}
+  # each apiserver advertises itself as a k8s endpoint
+  # needs to be combined with using the lease-based endpoint-reconciler
+  # see https://kubernetes.io/docs/admin/high-availability/#endpoint-reconciler
   advertiseAddress: {{ master["privateIP"] }}
-{% endif %}
 etcd:
   endpoints:
     # only connect to local etcd server
@@ -195,11 +193,7 @@ etcd:
 apiServerCertSANs:
 - 127.0.0.1
 - {{ master["privateIP"] }}
-{% if cluster.get("masterLoadBalancerIP") %}
-- {{ cluster["masterLoadBalancerIP"] }}
-{% else %}
-- {{ cluster["masterLoadBalancerFQDN"] }}
-{% endif %}
+- {{ cluster["masterLoadBalancerAddress"] }}
 {% if cluster["masterFQDN"] %}
 - {{ cluster["masterFQDN"] }}
 {% endif %}
@@ -243,27 +237,25 @@ sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 
-{% if cluster.get("masterLoadBalancerFQDN") %}
 #
-# since LB uses a FQDN != advertiseAddress, kube-proxy (in particular on
-# workers) need to connect to apiserver through the LB FQDN. the kube-proxy
-# DaemonSet reads its configuration from a configmap
+# kube-proxy (in particular on workers) needs to connect to the apiserver
+# through the load-balancer. The kube-proxy  DaemonSet reads its configuration
+# from a configmap, which is overwritten by every master 'kubeadm init'.
 #
 kubectl get configmap -n kube-system kube-proxy -o yaml > kube-proxy.cm
-sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerFQDN"] }}:6443#g' kube-proxy.cm
+sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerAddress"] }}:6443#g' kube-proxy.cm
 kubectl apply -f kube-proxy.cm --force
 # restart all kube-proxy pods to ensure that they load the new configmap
 kubectl delete pod -n kube-system -l k8s-app=kube-proxy
-{% endif %}
 
 # scale kube-dns to the number of masters running
 kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deployment/kube-dns
 
+
+{% if master == cluster["masters"][0] %}
 #
 # Setup pod network
 #
-
-{% if master == cluster["masters"][0] %}
 log INFO "installing pod network ..."
 kubever=$(kubectl version | base64 | tr -d '\n')
 kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"

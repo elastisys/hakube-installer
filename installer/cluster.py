@@ -31,14 +31,8 @@ CLUSTER_DEFAULTS = {
     # It will be added as a subject alternate name to the generated master
     # certificates.
     "masterFQDN":  None,
-    # The IP address where the master load-balancer can be reached.
-    # Note: this option is mutually exclusive with masterLoadBalancerFQDN.
-    "masterLoadBalancerIP": None,
-    # The DNS name where the master load-balancer can be reached (in some
-    # cases, such as AWS ELB, the load-balancer is not assigned a single
-    # static IP address and in such cases a FQDN needs to be used).
-    # Note: this option is mutually exclusive with masterLoadBalancerIP.
-    "masterLoadBalancerFQDN": None,
+    # The IP address or FQDN (DNS name) of the master load-balancer.
+    "masterLoadBalancerAddress": None,
     # (Optional) The username to use when logging in over SSH. Typically
     # 'ubuntu'.
     "sshLoginUser": "ubuntu",
@@ -97,8 +91,8 @@ CLUSTER_DEFAULTS = {
 
 
 class ClusterDefinition:
-    """A ClusterDefinition represents a cluster setup and serves as input
-    for the ClusterRenderer and ClusterInstaller."""
+    """A ClusterDefinition represents a cluster setup, from which cluster 
+    boot scripts can be `render`ed and `install`ed."""
 
     def __init__(self, path, assets_dir):
         """Create a ClusterDefinition from a spec at a given path.
@@ -130,12 +124,8 @@ class ClusterDefinition:
 
 
     def _validate(self):
-        if (not self.spec.get("masterLoadBalancerIP") and
-            not self.spec.get("masterLoadBalancerFQDN")):
-            raise ValueError("neither masterLoadBalancerIP nor masterLoadBalancerFQDN specified")
-        if (self.spec.get("masterLoadBalancerIP") and
-            self.spec.get("masterLoadBalancerFQDN")):
-            raise ValueError("only one of masterLoadBalancerIP and masterLoadBalancerFQDN may be specified")
+        if not self.spec.get("masterLoadBalancerAddress"):
+            raise ValueError("no masterLoadBalancerAddress specified")
 
         if not self.spec.get("masters"):
             raise ValueError("no master nodes specified")

@@ -65,8 +65,8 @@ These include:
     in the cluster definition.
   - `worker_private_ips`: needs to be set in the `privateIP` field for each
     worker in the cluster definition.
-  - `master_loadbalancer_fqdn`: needs to be set in the `masterLoadBalancerFQDN`
-    field in the cluster definition.
+  - `master_loadbalancer_fqdn`: needs to be set in the
+    `masterLoadBalancerAddress` field in the cluster definition.
 
 ### Install Kubernetes
 Once all VMs have booted, it is time to run the installer (refer to

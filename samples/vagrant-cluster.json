@@ -1,5 +1,5 @@
 {
-    "masterLoadBalancerIP": "10.2.0.100",
+    "masterLoadBalancerAddress": "10.2.0.100",
     "masters": [
         {
             "nodeName": "master0",
