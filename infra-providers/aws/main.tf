@@ -737,3 +737,11 @@ output "ubuntu_ami" {
 output "master_loadbalancer_fqdn" {
     value = "${aws_lb.master_lb.dns_name}"
 }
+
+output "vm_user" {
+    value = "${var.vm_user}"
+}
+
+output "ssh_private_key" {
+    value = "${var.ssh_private_key_path}"
+}
