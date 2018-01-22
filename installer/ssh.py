@@ -27,7 +27,7 @@ class SSHCommand:
     def run(self):
         """Executes the script against the remote host."""
         sshcmd = ('ssh -i {pkey} -o StrictHostKeyChecking=no {user}@{host} '
-                'bash -s < {scriptpath} 2>&1 {outpath}').format(
+                'bash -s < {scriptpath} 2>&1 > {outpath}').format(
                     pkey=self.private_key,
                     user=self.username,
                     host=self.host,
