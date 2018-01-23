@@ -345,25 +345,62 @@ EOF
 }
 
 # The access grants to give the IAM role.
-resource "aws_iam_role_policy" "test_policy" {
+resource "aws_iam_role_policy" "policy" {
     name = "${local.iam_role_policy}"
     role = "${aws_iam_role.instance_role.id}"
 
+    # grant kubelets right to access EC2 API, create ELBs, and
+    # download docker images from Amazon ECR
     policy = <<EOF
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "ec2:*",
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Action": "elasticloadbalancing:*",
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "ec2:*",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "elasticloadbalancing:*",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:GetAuthorizationToken",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:BatchCheckLayerAvailability",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:GetDownloadUrlForLayer",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:GetRepositoryPolicy",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:DescribeRepositories",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:ListImages",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": "ecr:BatchGetImage",
+            "Effect": "Allow",
+            "Resource": "*"
+        }
+    ]
 }
 EOF
 }
