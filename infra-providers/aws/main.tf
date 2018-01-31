@@ -425,6 +425,9 @@ resource "aws_security_group" "cluster_sg" {
 	cidr_blocks     = ["0.0.0.0/0"]
     }
 
+    # Only tag this sg with the cluster tag. When k8s creates a LoadBalancer
+    # service, it updates the rules on _the_ "cluster security group"
+    # (meaning there can only be one such group tagged with the cluster tag).
     tags = "${merge(local.cluster_tags, map("Name", "${local.cluster_sg_name}"))}"
 }
 
@@ -442,7 +445,9 @@ resource "aws_security_group" "nfs_sg" {
 	protocol        = "tcp"
     }
 
-    tags = "${merge(local.cluster_tags, map("Name", "${var.cluster_name}-nfs-sg"))}"
+    tags = {
+        Name = "${var.cluster_name}-nfs-sg"
+    }
 }
 
 
@@ -452,7 +457,9 @@ resource "aws_security_group" "master_sg" {
     description = "${var.cluster_name} master firewall rules"
     vpc_id      = "${aws_vpc.net.id}"
 
-    tags = "${merge(local.cluster_tags, map("Name", "${local.master_sg_name}"))}"
+    tags = {
+        Name = "${local.master_sg_name}"
+    }
 }
 
 # create firewall port openings for masters
@@ -660,7 +667,7 @@ resource "aws_elb" "master_public_lb" {
     subnets            = ["${aws_subnet.subnets.*.id}"]
     internal           = false
     security_groups    = ["${aws_security_group.master_public_lb_sg.id}"]
-  
+
     listener {
         instance_port     = 6443
         instance_protocol = "tcp"
@@ -739,7 +746,9 @@ resource "aws_security_group" "worker_sg" {
     description = "${var.cluster_name} worker firewall rules"
     vpc_id      = "${aws_vpc.net.id}"
 
-    tags = "${merge(local.cluster_tags, map("Name", "${local.worker_sg_name}"))}"
+    tags = {
+        Name = "${local.worker_sg_name}"
+    }  
 }
 
 # create firewall port openings for workers
