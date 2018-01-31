@@ -508,6 +508,18 @@ resource "aws_security_group_rule" "master_ingress_rules" {
     cidr_blocks       = ["${var.master_firewall_allowed_ips[count.index / length(var.master_firewall_port_openings)]}"]
 }
 
+# Always open apiserver port 6443 for traffic originating from within the
+# VPC. This is needed to not block out the network loadbalancer's health
+# checks.
+resource "aws_security_group_rule" "apiserver_internal_access" {
+  security_group_id = "${aws_security_group.master_sg.id}"
+  type              = "ingress"
+  from_port         = "6443"
+  to_port           = "6443"
+  protocol          = "tcp"
+  cidr_blocks       = ["${aws_vpc.net.cidr_block}"]
+}
+
 # masters should be able to reach the public internet
 resource "aws_security_group_rule" "master_egress_rules" {
     security_group_id = "${aws_security_group.master_sg.id}"
