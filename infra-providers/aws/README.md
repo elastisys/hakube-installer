@@ -19,10 +19,6 @@ selected region:
 - A [VPC (Virtual Private Cloud)](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Introduction.html).
   That is, a virtual network. It is created with several subnets --  one for
   each availability zone in the region (a subnet is always tied to a single AZ).
-  - A network
-    [Access Control List (ACL)](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_ACLs.html)
-	for the VPC, which only admits incoming internet access to a limited range
-    of ports -- kubernetes apiserver (6443) and SSH (22).
 - A key pair from the specified public SSH key, which is used to launch the
   instances.
 - Security groups that further restrict port access to instances: one for the
@@ -39,6 +35,12 @@ selected region:
 - A collection of `kubeworker`instances (specified by `num_worker_nodes`).
   No software apart from a baseline Ubuntu OS is installed.
 
+- One internal Elastic Load Balancer (ELB) fronting the `masters` to be used 
+  internally by the cluster nodes.
+
+- One internet-facing Elastic Load Balancer (ELB) fronting the `masters` to be 
+  used from the internet to access Kubernetes API server (for example, via 
+  `kubectl`).
 
 Run:
 
@@ -65,8 +67,10 @@ These include:
     in the cluster definition.
   - `worker_private_ips`: needs to be set in the `privateIP` field for each
     worker in the cluster definition.
-  - `master_loadbalancer_fqdn`: needs to be set in the
+  - `master_internal_loadbalancer_fqdn`: needs to be set in the
     `masterLoadBalancerAddress` field in the cluster definition.
+  - `master_public_loadbalancer_fqdn`: needs to be added to the list of master 
+     FQDNs in `masterFQDNs`.
 
 ### Install Kubernetes
 Once all VMs have booted, it is time to run the installer (refer to

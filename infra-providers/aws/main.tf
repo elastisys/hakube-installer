@@ -17,8 +17,7 @@ variable "aws_secret_key" {
     description = "Your AWS Secret Access Key. https://console.aws.amazon.com/iam/home?#/users"
 }
 
-
-variable "aws_region" {
+variable "region" {
     description = "Region where the infrastructure is to be created. For example, 'us-east-1'. See http://docs.aws.amazon.com/general/latest/gr/rande.html#ec2_region"
 }
 
@@ -30,55 +29,19 @@ variable "cluster_name" {
 # Optional variables
 #
 
-variable "vpc_name" {
-    description = "The name of the virtual network. Default: [cluster_name]-vpc"
-    default     = ""
-}
-
 variable "vpc_address_range" {
     description = "The IP address range for the virtual network onto which VMs are attached. Must not clash with kubernetes pod IP range or service IP range."
     default     = "10.1.0.0/16"
 }
 
-variable "vpc_firewall_port_openings" {
-    description = "Virtual network firewall port openings on. The network must admit access to all ports that are to be exposed by VMs in the network."
-    default     = ["22", "6443"]
-}
-
-variable "vpc_firewall_allowed_ips" {
-    description = "A list of allowed source addresses for firewall openings. Specified as CIDR ranges (192.0.0.0/8)."
-    default     = ["0.0.0.0/0"]
-    type        = "list"
-}
-
-variable "instance_tenancy" {
+variable "vpc_instance_tenancy" {
     description = "Describes if instances within the VPC are to run on dedicated or shared hardware. See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html"
     default     = "default"
-}
-
-variable "subnet_name_prefix" {
-    description = "The name prefix to use for created subnets within the virtual network. One subnet will be created for each availabiltiy zone in the region. Default: [cluster_name]-subnet"
-    default     = ""
 }
 
 variable "subnet_cidr_bits" {
     description = "The size of each subnet in bits. If set to 8, each subnet that gets created (one per availability zone) is given a slice of the VPC network with room for 2^8 = 256 hosts. If the VPC network range is 10.1.0.0/16, the first subnet would be 10.1.0.0/24, the second would be 10.1.1.0/24, the third would be 10.1.2.0/24, etc."
     default     = "8"
-}
-
-variable "keypair_name" {
-    description = "The name of the keypair to use when launching VMs. Default: [cluster_name]-sshkey"
-    default     = ""
-}
-
-variable "iam_role_name" {
-    description = "The name of the IAM instance profile role to create. Default: [cluster_name]-iam-role"
-    default     = ""
-}
-
-variable "iam_profile_name" {
-    description = "The name of the IAM instance profile to create. Default: [cluster_name]-iam-profile"
-    default     = ""
 }
 
 variable "ubuntu_image" {
@@ -96,11 +59,6 @@ variable "num_masters" {
     default     = "3"
 }
 
-variable "master_name_prefix" {
-    description = "The name prefix to use for master VMs. Default: [cluster_name]-master. An index is appended to the prefix for each VM so that it becomes [cluster_name]-master-[index]."
-    default     = ""
-}
-
 variable "master_instance_type" {
     description = "The instance type to use for the Kubernetes master VM."
     default     = "t2.medium"
@@ -109,6 +67,11 @@ variable "master_instance_type" {
 variable "master_ebs_optimized" {
     description = "Set to true to use SSD disks. Note: not all instance types can be run as EBS-optimized."
     default     = false
+}
+
+variable "master_instance_tenancy" {
+    description = "Describes if master instances are to run on dedicated or shared hardware. See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html"
+    default     = "default"
 }
 
 variable "master_subnet_ip_start_index" {
@@ -134,12 +97,7 @@ variable "master_data_disk_size_gb" {
 
 variable "num_workers" {
     description = "The number of worker nodes to create."
-    default     = "2"
-}
-
-variable "worker_name_prefix" {
-    description = "The name prefix to use for worker VMs. Default: [cluster_name]-worker. An index is appended to the prefix for each VM so that it becomes [cluster_name]-worker-[index]."
-    default     = ""
+    default     = "3"
 }
 
 variable "worker_instance_type" {
@@ -150,6 +108,11 @@ variable "worker_instance_type" {
 variable "worker_ebs_optimized" {
     description = "Set to true to use SSD disks. Note: not all instance types can be run as EBS-optimized."
     default     = false
+}
+
+variable "worker_instance_tenancy" {
+    description = "Describes if worker instances are to run on dedicated or shared hardware. See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html"
+    default     = "default"
 }
 
 variable "worker_subnet_ip_start_index" {
@@ -182,33 +145,25 @@ variable "ssh_private_key_path" {
 #
 
 locals {
-    default_vpc_name    = "${var.cluster_name}-vpc"
-    default_subnet_name_prefix = "${var.cluster_name}-subnet"
-    default_key_name    = "${var.cluster_name}-sshkey"
-    default_iam_role    = "${var.cluster_name}-iam-role"
-    default_iam_profile = "${var.cluster_name}-iam-profile"
-    default_master_name = "${var.cluster_name}-master"
-    default_worker_name = "${var.cluster_name}-worker"
+    vpc_name            = "${var.cluster_name}-vpc"
+    vpc_gateway_name    = "${var.cluster_name}-vpc-gw"
+    route_table_name    = "${var.cluster_name}-vpc-rt"
 
-    vpc_name            = "${var.vpc_name != "" ? var.vpc_name : local.default_vpc_name}"
-    vpc_gateway_name    = "${local.vpc_name}-gateway"
-    route_table_name    = "${local.vpc_name}-rt"
-    subnet_name_prefix  = "${var.subnet_name_prefix != "" ? var.subnet_name_prefix : local.default_subnet_name_prefix}"
+    subnet_name_prefix   = "${var.cluster_name}-subnet"
+    key_name             = "${var.cluster_name}-sshkey"
+    iam_profile_name     = "${var.cluster_name}-iam-profile"
+    iam_role_name        = "${var.cluster_name}-iam-role"
+    iam_role_policy_name = "${local.iam_role_name}-policy"
 
-    key_name            = "${var.keypair_name != "" ? var.keypair_name : local.default_key_name}"
-    iam_role_name       = "${var.iam_role_name != "" ? var.iam_role_name : local.default_iam_role}"
-    iam_profile_name    = "${var.iam_profile_name != "" ? var.iam_profile_name : local.default_iam_profile}"
-    iam_role_policy     = "${local.iam_role_name}-policy"
-
-    master_name_prefix  = "${var.master_name_prefix != "" ? var.master_name_prefix : local.default_master_name}"
+    master_name_prefix  = "${var.cluster_name}-master"
+    worker_name_prefix  = "${var.cluster_name}-worker"
 
     master_sg_name      = "${var.cluster_name}-master-sg"
-    master_loadbalancer_name = "${var.cluster_name}-master-lb"
-
     cluster_sg_name     = "${var.cluster_name}-sg"
-
-    worker_name_prefix  = "${var.worker_name_prefix != "" ? var.worker_name_prefix : local.default_worker_name}"
     worker_sg_name      = "${var.cluster_name}-worker-sg"
+
+    master_internal_lb_name = "${var.cluster_name}-master-internal-lb"
+    master_public_lb_name   = "${var.cluster_name}-master-public-lb"
 
     # Kubernetes cluster tags.
     # Unless a cloud-config is specified which specifies a "legacy" tag
@@ -231,12 +186,18 @@ terraform {
 }
 
 provider "aws" {
-    version    = "~> 1.6"
+    version    = "~> 1.8"
 
     access_key = "${var.aws_access_key}"
     secret_key = "${var.aws_secret_key}"
-    region     = "${var.aws_region}"
+    region     = "${var.region}"
 }
+
+# versioning of the null provider
+provider "null" {
+    version = "~> 1.0"
+}
+
 
 # lists all availability zones in the region
 data "aws_availability_zones" "available" {}
@@ -248,7 +209,7 @@ locals {
 # create a virtual network
 resource "aws_vpc" "net" {
     cidr_block           = "${var.vpc_address_range}"
-    instance_tenancy     = "${var.instance_tenancy}"
+    instance_tenancy     = "${var.vpc_instance_tenancy}"
     # support aws DNS within the VPC. as an example, this allows instances
     # to resolve aws-provided private DNS names (such as EFS file system
     # DNS names)
@@ -256,27 +217,6 @@ resource "aws_vpc" "net" {
     enable_dns_hostnames = true
 
     tags             = "${merge(local.cluster_tags, map("Name", "${local.vpc_name}"))}"
-}
-
-# Access control for the virtual network
-resource "aws_network_acl" "vpc_acl" {
-    vpc_id = "${aws_vpc.net.id}"
-
-    tags = "${merge(local.cluster_tags, map("Name", "${local.vpc_name}"))}"
-}
-
-# Firewall rules for the virtual network: opens the specified ports for each allowed IP range
-resource "aws_network_acl_rule" "network_rule" {
-    count = "${length(var.vpc_firewall_port_openings) * length(var.vpc_firewall_allowed_ips)}"
-
-    network_acl_id = "${aws_network_acl.vpc_acl.id}"
-    rule_number    = "${100 + count.index}"
-    egress         = false
-    protocol       = "tcp"
-    rule_action    = "allow"
-    cidr_block     = "${var.vpc_firewall_allowed_ips[count.index / length(var.vpc_firewall_port_openings)]}"
-    from_port      = "${var.vpc_firewall_port_openings[count.index % length(var.vpc_firewall_port_openings)]}"
-    to_port        = "${var.vpc_firewall_port_openings[count.index % length(var.vpc_firewall_port_openings)]}"
 }
 
 # create one subnet in the virtual network for each availability zone
@@ -301,16 +241,36 @@ resource "aws_internet_gateway" "gateway" {
     tags   = "${merge(local.cluster_tags, map("Name", "${local.vpc_gateway_name}"))}"
 }
 
-# add route table and associate with subnet (to allow internet to reach subnet)
-resource "aws_route_table" "rt" {
-    vpc_id = "${aws_vpc.net.id}"
+# get the main VPC route table
+data "aws_route_table" "main_vpc_routetable" {
+  vpc_id = "${aws_vpc.net.id}"
+  filter {
+    name = "association.main"
+    values = ["true"]
+  }
+}
 
-    route {
-	cidr_block = "0.0.0.0/0"
-	gateway_id = "${aws_internet_gateway.gateway.id}"
-    }
+# add route table and associate with subnet (to allow internet to reach
+# subnet)
+# resource "aws_route_table" "rt" {
+#     vpc_id = "${aws_vpc.net.id}"
 
-    tags   = "${merge(local.cluster_tags, map("Name", "${local.route_table_name}"))}"
+#     route {
+# 	cidr_block = "0.0.0.0/0"
+# 	gateway_id = "${aws_internet_gateway.gateway.id}"
+#     }
+
+#     tags   = "${merge(local.cluster_tags, map("Name", "${local.route_table_name}"))}"
+# }
+
+# allow internet access to/from the subnet by adding a route table entry
+# for the internet gateway
+resource "aws_route" "internet_access" {
+  depends_on              = ["data.aws_route_table.main_vpc_routetable"]
+
+  route_table_id          = "${data.aws_route_table.main_vpc_routetable.id}"
+  destination_cidr_block  = "0.0.0.0/0"
+  gateway_id              = "${aws_internet_gateway.gateway.id}"
 }
 
 # associate route table with each subnet (one for each AZ)
@@ -318,7 +278,7 @@ resource "aws_route_table_association" "rtassociation" {
     count = "${length(local.az_names)}"
 
     subnet_id      = "${element(local.subnet_ids, count.index)}"
-    route_table_id = "${aws_route_table.rt.id}"
+    route_table_id = "${data.aws_route_table.main_vpc_routetable.id}"
 }
 
 
@@ -346,7 +306,7 @@ EOF
 
 # The access grants to give the IAM role.
 resource "aws_iam_role_policy" "policy" {
-    name = "${local.iam_role_policy}"
+    name = "${local.iam_role_policy_name}"
     role = "${aws_iam_role.instance_role.id}"
 
     # grant kubelets right to access EC2 API, create ELBs, and
@@ -518,6 +478,7 @@ resource "aws_security_group_rule" "apiserver_internal_access" {
   to_port           = "6443"
   protocol          = "tcp"
   cidr_blocks       = ["${aws_vpc.net.cidr_block}"]
+  description       = "VPC-internal traffic (like LB health checks) must be allowed on 6443"
 }
 
 # masters should be able to reach the public internet
@@ -537,7 +498,7 @@ resource "aws_instance" "masters" {
 
     ami           = "${data.aws_ami.ubuntu.id}"
     instance_type = "${var.master_instance_type}"
-    tenancy       = "${var.instance_tenancy}"
+    tenancy       = "${var.master_instance_tenancy}"
     ebs_optimized = "${var.master_ebs_optimized}"
 
     key_name               = "${local.key_name}"
@@ -546,7 +507,13 @@ resource "aws_instance" "masters" {
 
     # spread instances over available subnets
     subnet_id     = "${element(aws_subnet.subnets.*.id, count.index)}"
-    associate_public_ip_address = false
+    # Actually, we don't want to assign a dynamic public IP to the instance.
+    # Instead, we want to give it a static (elastic) IP. But the problem is
+    # that even if we specify false, terraform/AWS gives it a public IP prior
+    # to its elastic IP which causes a re-run of 'terraform apply' to want t
+    # recreate the instances and all their volumes, which of course is
+    # unacceptable.
+    associate_public_ip_address = true
     private_ip = "${cidrhost(element(aws_subnet.subnets.*.cidr_block, count.index), var.master_subnet_ip_start_index + (count.index / length(aws_subnet.subnets.*.id)) )}"
 
     # the kubernetes.io/role/master master tag can be useful. for example,
@@ -588,51 +555,142 @@ resource "aws_volume_attachment" "master_vols" {
     force_detach = true
 }
 
-# master network loadbalancer
-resource "aws_lb" "master_lb" {
-    name               = "${local.master_loadbalancer_name}"
-    load_balancer_type = "network"
+
+# security group allowing all traffic originating from private IPs within
+# the VPC access to the internal loadbalancer
+resource "aws_security_group" "master_internal_lb_sg" {
+    name        = "${local.master_internal_lb_name}-sg"
+    description = "${var.cluster_name} - allow access to internal LB from all private IPs in VPC"
+    vpc_id      = "${aws_vpc.net.id}"
+
+    ingress {
+	from_port       = 6443
+	to_port         = 6443
+	protocol        = "tcp"
+        cidr_blocks     = ["${aws_vpc.net.cidr_block}"]
+    }
+
+    # outgoing traffic from LB allowed to go anywhere
+    egress {
+        from_port         = "0"
+        to_port           = "0"
+        protocol          = "-1"
+        cidr_blocks       = ["0.0.0.0/0"]
+    }
+
+    tags = "${merge(local.cluster_tags, map("Name", "${local.master_internal_lb_name}-sg"))}"
+}
+
+# internal apiserver loadbalancer that will be used internally by
+# kubernetes nodes
+resource "aws_elb" "master_internal_lb" {
+    name               = "${local.master_internal_lb_name}"
     subnets            = ["${aws_subnet.subnets.*.id}"]
+    internal           = true
+
+    listener {
+        instance_port     = 6443
+        instance_protocol = "tcp"
+        lb_port           = 6443
+        lb_protocol       = "tcp"
+    }
 
     # connection idle timeout in seconds
     idle_timeout    = 60
+    cross_zone_load_balancing = true
+    connection_draining = false
+    connection_draining_timeout = 300
 
-    tags = "${merge(local.cluster_tags, map("Name", "${local.master_loadbalancer_name}"))}"
-}
-
-# master LB backend (target group)
-resource "aws_lb_target_group" "masters" {
-    name     = "${local.master_loadbalancer_name}-backends"
-    port     = 6443
-    protocol = "TCP"
-    vpc_id   = "${aws_vpc.net.id}"
-}
-
-# master LB frontend
-resource "aws_lb_listener" "lb_frontend" {
-    load_balancer_arn = "${aws_lb.master_lb.arn}"
-    port              = "6443"
-    protocol          = "TCP"
-
-    default_action {
-	target_group_arn = "${aws_lb_target_group.masters.arn}"
-	type             = "forward"
+    health_check {
+        healthy_threshold   = 2
+        unhealthy_threshold = 2
+        timeout             = 5
+        target              = "SSL:6443"
+        interval            = 10
     }
+
+    security_groups = ["${aws_security_group.master_internal_lb_sg.id}"]
+
+    tags = "${merge(local.cluster_tags, map("Name", "${local.master_internal_lb_name}"))}"
 }
 
-# add masters to LB backend (target group)
-resource "aws_lb_target_group_attachment" "masters" {
-    count = "${var.num_masters}"
+# register masters with internal LB
+resource "aws_elb_attachment" "internal_elb_masters" {
+    count    = "${var.num_masters}"
 
-    target_group_arn = "${aws_lb_target_group.masters.arn}"
-    target_id        = "${element(aws_instance.masters.*.id, count.index)}"
-    port             = 6443
+    elb      = "${aws_elb.master_internal_lb.id}"
+    instance = "${element(aws_instance.masters.*.id, count.index)}"
 }
 
-# versioning of the null provider
-provider "null" {
-    version = "~> 1.0"
+# security group allowing traffic from permitted ip ranges to the
+# public apiserver loadbalancer
+resource "aws_security_group" "master_public_lb_sg" {
+    name        = "${local.master_public_lb_name}-sg"
+    description = "${var.cluster_name} - allow selected IP addresses to access public apiserver LB"
+    vpc_id      = "${aws_vpc.net.id}"
+
+    # outgoing traffic from LB allowed to go anywhere
+    egress {
+        from_port         = "0"
+        to_port           = "0"
+        protocol          = "-1"
+        cidr_blocks       = ["0.0.0.0/0"]
+    }
+
+    tags = "${merge(local.cluster_tags, map("Name", "${local.master_public_lb_name}-sg"))}"
 }
+
+# create firewall port openings for public master ELB
+resource "aws_security_group_rule" "master_public_elb_ingress_rules" {
+    count = "${length(var.master_firewall_allowed_ips)}"
+
+
+    security_group_id = "${aws_security_group.master_public_lb_sg.id}"
+    type              = "ingress"
+    from_port         = "6443"
+    to_port           = "6443"
+    protocol          = "tcp"
+    cidr_blocks       = ["${var.master_firewall_allowed_ips[count.index]}"]
+}
+
+
+# public (internet-facing) master loadbalancer
+resource "aws_elb" "master_public_lb" {
+    name               = "${local.master_public_lb_name}"
+    subnets            = ["${aws_subnet.subnets.*.id}"]
+    internal           = false
+    security_groups    = ["${aws_security_group.master_public_lb_sg.id}"]
+  
+    listener {
+        instance_port     = 6443
+        instance_protocol = "tcp"
+        lb_port           = 6443
+        lb_protocol       = "tcp"
+    }
+
+    # connection idle timeout in seconds
+    idle_timeout    = 60
+    cross_zone_load_balancing = true
+    connection_draining = false
+    connection_draining_timeout = 300
+
+    health_check {
+        healthy_threshold   = 2
+        unhealthy_threshold = 2
+        timeout             = 5
+        target              = "SSL:6443"
+        interval            = 10
+     }
+}
+
+# register masters with public LB
+resource "aws_elb_attachment" "public_elb_masters" {
+    count    = "${var.num_masters}"
+
+    elb      = "${aws_elb.master_public_lb.id}"
+    instance = "${element(aws_instance.masters.*.id, count.index)}"
+}
+
 
 # Log onto the VM and create an ext4 file system on the data disk
 resource "null_resource" "master_bootstraps" {
@@ -716,7 +774,7 @@ resource "aws_instance" "workers" {
 
     ami           = "${data.aws_ami.ubuntu.id}"
     instance_type = "${var.worker_instance_type}"
-    tenancy       = "${var.instance_tenancy}"
+    tenancy       = "${var.worker_instance_tenancy}"
     ebs_optimized = "${var.worker_ebs_optimized}"
 
     key_name               = "${local.key_name}"
@@ -783,8 +841,12 @@ output "ubuntu_ami" {
     value = "${data.aws_ami.ubuntu.id}"
 }
 
-output "master_loadbalancer_fqdn" {
-    value = "${aws_lb.master_lb.dns_name}"
+output "master_internal_loadbalancer_fqdn" {
+    value = "${aws_elb.master_internal_lb.dns_name}"
+}
+
+output "master_public_loadbalancer_fqdn" {
+    value = "${aws_elb.master_public_lb.dns_name}"
 }
 
 output "vm_user" {
@@ -793,4 +855,8 @@ output "vm_user" {
 
 output "ssh_private_key" {
     value = "${var.ssh_private_key_path}"
+}
+
+output "cluster_name" {
+    value = "${var.cluster_name}"
 }

@@ -1,6 +1,6 @@
 {
-    "masterFQDN":  "TODO: domain name (not necessary)",
-    "masterLoadBalancerAddress": "TODO: ELB FQDN",
+    "masterFQDNs":  ["TODO: external ELB FQDN and (optionally) domain name to refer to it"],
+    "masterLoadBalancerAddress": "TODO: internal ELB FQDN",
     "sshLoginKey": "~/.ssh/id_rsa",
     "masters": [
         {

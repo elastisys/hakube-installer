@@ -195,9 +195,9 @@ apiServerCertSANs:
 - 127.0.0.1
 - {{ master["privateIP"] }}
 - {{ cluster["masterLoadBalancerAddress"] }}
-{% if cluster["masterFQDN"] %}
-- {{ cluster["masterFQDN"] }}
-{% endif %}
+{% for master_fqdn in cluster["masterFQDNs"] %}
+- {{ master_fqdn }}
+{% endfor %}
 networking:
   podSubnet: 10.32.0.0/12
 {% if cluster["hooks"].get("cloudProvider") %}

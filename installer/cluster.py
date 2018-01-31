@@ -26,12 +26,16 @@ MASTER_SH_TEMPLATE = "master.sh.j2"
 WORKER_SH_TEMPLATE = "worker.sh.j2"
 
 CLUSTER_DEFAULTS = {
-    # (Optional) A DNS name intended to be given to the master
-    # load-balancer, which may be used to access the Kubernetes API server.
-    # It will be added as a subject alternate name to the generated master
-    # certificates.
-    "masterFQDN":  None,
+    # (Optional) A list of DNS names intended to be used to access the
+    # API server. This should, for example, in the AWS case include
+    # the FQDN of the public master loadbalancer, and any additional
+    # domain names one would like to access it through.
+    # All FQDNs in the list are added as subject alternate names to the
+    # generated master certificates.
+    "masterFQDNs":  [],
     # The IP address or FQDN (DNS name) of the master load-balancer.
+    # This will be used internally within the cluster. For example, by
+    # workers to connect to the apiservers.
     "masterLoadBalancerAddress": None,
     # (Optional) The username to use when logging in over SSH. Typically
     # 'ubuntu'.
