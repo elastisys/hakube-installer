@@ -603,7 +603,7 @@ resource "aws_elb" "master_internal_lb" {
     }
 
     # connection idle timeout in seconds
-    idle_timeout    = 60
+    idle_timeout    = 300
     cross_zone_load_balancing = true
     connection_draining = false
     connection_draining_timeout = 300
@@ -676,7 +676,7 @@ resource "aws_elb" "master_public_lb" {
     }
 
     # connection idle timeout in seconds
-    idle_timeout    = 60
+    idle_timeout    = 300
     cross_zone_load_balancing = true
     connection_draining = false
     connection_draining_timeout = 300
