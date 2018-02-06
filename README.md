@@ -56,15 +56,15 @@ The simplest way to get started is to try out a HA cluster on your local machine
 
          python3 -m venv .venv
          source .venv/bin/activate
-         pip install -r requirements.txt
+         pip install .
 
 0. Run the installer script using
    the [vagrant-cluster.json](samples/vagrant-cluster.json).
 
          # render cluster assets (certs, keys, bootscripts)
-         python -m installer render samples/vagrant-cluster.json
+         hakube-installer render samples/vagrant-cluster.json
          # install nodes over ssh
-         python -m installer install samples/vagrant-cluster.json
+         hakube-installer install samples/vagrant-cluster.json
 
 0. Follow the post-installation step (see below) to run `kubectl` commands.
 
@@ -202,7 +202,7 @@ A couple of sample cluster definitions are available under [samples](samples).
 
         python3 -m venv .venv
         . .venv/bin/activate
-        pip install -r requirements.txt
+        pip install .
 
 
 ## Render cluster assets
@@ -211,7 +211,7 @@ Render *cluster assets*. The cluster assets consists of secrets (cluster token,
 certificates, ssh keys) and boot scripts for each  master and worker. The assets
 are written to `assets/` by default (run `--help` for flags).
 
-        python -m installer render cluster.json
+        hakube-installer render cluster.json
 
 You can skim through the generated assets to convince yourself that they are
 acceptable.
@@ -222,18 +222,20 @@ Use the installer to install the cluster by running the boot scripts (over SSH)
  against the master and workers declared in the cluster definition:
 
 
-        python -m installer install cluster.json
+        hakube-installer install cluster.json
 
 By default all cluster machines are installed at once. One can also run the
 installer against a subset of the machines in the cluster definition. For
 example:
 
-        python -m installer install cluster.json ip-10-1-0-10.ec2.internal
+        hakube-installer install cluster.json ip-10-1-0-10.ec2.internal
 
 This can be useful if something went wrong with a node or it needs to be updated
 or re-installed. Depending on the state of the node, it may be necessary to
 first log in to the node and run `sudo kubeadm reset` to clear a prior
-installation.
+installation (depending on the network provider used, additional steps may be
+required to
+[reset the node's iptables](https://blog.heptio.com/properly-resetting-your-kubeadm-bootstrapped-cluster-nodes-heptioprotip-473bd0b824aa).
 
 
 ### Post-installation

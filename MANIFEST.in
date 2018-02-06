@@ -1,0 +1,2 @@
+include installer/*.sh
+recursive-include installer/templates *.j2
