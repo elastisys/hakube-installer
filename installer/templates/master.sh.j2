@@ -53,26 +53,26 @@ EOF
 sudo chmod 600 /etc/kubernetes/pki/etcd/server-key.pem
 
 # install ssh keys
-sudo tee /home/ubuntu/.ssh/id_rsa.pub > /dev/null <<EOF
+sudo tee $HOME/.ssh/id_rsa.pub > /dev/null <<EOF
 {% include cluster["sshKeysDir"] + "/" + master_name + "_rsa.pub" %}
 EOF
-sudo tee /home/ubuntu/.ssh/id_rsa > /dev/null <<EOF
+sudo tee $HOME/.ssh/id_rsa > /dev/null <<EOF
 {% include cluster["sshKeysDir"] + "/" + master_name + "_rsa" %}
 EOF
-sudo chmod 600 /home/ubuntu/.ssh/id_rsa
+sudo chmod 600 $HOME/.ssh/id_rsa
 
 #
 # allow master peers ssh access
 #
 {% for master in cluster["masters"] %}
-tee -a /home/ubuntu/.ssh/authorized_keys > /dev/null <<EOF
+tee -a $HOME/.ssh/authorized_keys > /dev/null <<EOF
 {% include cluster["sshKeysDir"] + "/" + master["nodeName"] + "_rsa.pub" %}
 EOF
 {% endfor %}
 
 # allow peers to ssh/scp as root
 sudo mkdir -p /root/.ssh
-cat /home/ubuntu/.ssh/authorized_keys | sudo tee -a /root/.ssh/authorized_keys > /dev/null
+cat $HOME/.ssh/authorized_keys | sudo tee -a /root/.ssh/authorized_keys > /dev/null
 
 
 #

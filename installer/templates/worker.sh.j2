@@ -17,13 +17,13 @@ log INFO "installing kubeadm ..."
 {% include "fragments/kubeadm.sh.j2" %}
 
 # install ssh keys
-sudo tee /home/ubuntu/.ssh/id_rsa.pub > /dev/null <<EOF
+sudo tee $HOME/.ssh/id_rsa.pub > /dev/null <<EOF
 {% include cluster["sshKeysDir"] + "/" + worker_name + "_rsa.pub" %}
 EOF
-sudo tee /home/ubuntu/.ssh/id_rsa > /dev/null <<EOF
+sudo tee $HOME/.ssh/id_rsa > /dev/null <<EOF
 {% include cluster["sshKeysDir"] + "/" + worker_name + "_rsa" %}
 EOF
-sudo chmod 600 /home/ubuntu/.ssh/id_rsa
+sudo chmod 600 $HOME/.ssh/id_rsa
 
 #
 # Run kubeadm
