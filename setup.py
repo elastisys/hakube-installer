@@ -26,7 +26,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "hakube-installer = installer.main:cli"
+            "hakube-installer = hakubeinstaller.main:cli"
         ],
     },
 )
