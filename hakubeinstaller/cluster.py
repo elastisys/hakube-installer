@@ -108,11 +108,6 @@ class ClusterDefinition:
         """
         self.assets_dir = assets_dir
 
-        if self.token_rendered():
-            self.cluster_token = ClusterToken.parse(self.token_path()).get()
-        else:
-            self.cluster_token = ClusterToken().get()
-
         if not os.path.isfile(path):
             fail("cluster definition does not exist: {}".format(path))
         with open(path, "r") as f:
@@ -310,8 +305,12 @@ class ClusterDefinition:
         self._validate_software_prerequisites()
 
         if overwrite_secrets or not self.token_rendered():
+            # generate a new token
+            self.cluster_token = ClusterToken().get()
             with open(self.token_path(), "w", encoding="utf-8") as f:
                 f.write(self.cluster_token)
+        # read token from file
+        self.cluster_token = ClusterToken.parse(self.token_path()).get()
 
         if overwrite_secrets or not self.etcd_ca_rendered():
             LOG.info("generating etcd ca cert ...")
