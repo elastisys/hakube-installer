@@ -100,8 +100,7 @@ permitted by the json parser.**
     # (Optional) A private SSH login key to use when connecting to nodes.
     # Can be overridden on a per-node basis (see below).
     "sshLoginKey": "~/.ssh/id_rsa",
-    # The list of master nodes in the cluster. A minimum of 3 masters is
-    # required.
+    # The list of master nodes in the cluster.
     "masters": [
         {
             # The node's name.
