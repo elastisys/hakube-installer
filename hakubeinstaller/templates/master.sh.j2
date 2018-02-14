@@ -108,9 +108,9 @@ TimeoutStartSec=0
 
 ExecStart=/usr/local/bin/etcd --name \${PEER_NAME} \\
      --data-dir /var/lib/etcd \\
-     --listen-client-urls https://\${PRIVATE_IP}:2379 \\
+     --listen-client-urls https://\${PRIVATE_IP}:2379,https://127.0.0.1:2379 \\
      --advertise-client-urls https://\${PRIVATE_IP}:2379 \\
-     --listen-peer-urls https://\${PRIVATE_IP}:2380 \\
+     --listen-peer-urls https://\${PRIVATE_IP}:2380,https://127.0.0.1:2380 \\
      --initial-advertise-peer-urls https://\${PRIVATE_IP}:2380 \\
      --cert-file=/etc/kubernetes/pki/etcd/server.pem \\
      --key-file=/etc/kubernetes/pki/etcd/server-key.pem \\
