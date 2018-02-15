@@ -129,12 +129,14 @@ permitted by the json parser.**
         {
             "nodeName": "ip-10-1-0-40.ec2.internal",
             "privateIP": "10.1.0.40",
-            "publicIP": "34.239.205.162"
+            "publicIP": "34.239.205.162",
+            "sshLoginKey": "~/.ssh/worker_rsa"
         },
         {
             "nodeName": "ip-10-1-1-40.ec2.internal",
             "privateIP": "10.1.1.40",
-            "publicIP": "52.72.31.142"
+            "publicIP": "52.72.31.142",
+            "sshLoginKey": "~/.ssh/worker_rsa"
         }
     ],
 
