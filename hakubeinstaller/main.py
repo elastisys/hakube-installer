@@ -31,7 +31,8 @@ def install(args):
     clusterdef = cluster.ClusterDefinition(cluster_path, assets_dir)
 
     targeted_nodes = clusterdef.get_nodes_by_name(args.nodes)
-    clusterdef.install(targeted_nodes)
+    log_dir = os.path.abspath(args.log_dir)
+    clusterdef.install(targeted_nodes, log_dir=log_dir)
 
 
 def cli():
@@ -78,6 +79,10 @@ def cli():
     parser_install.add_argument(
         "--assets-dir", metavar="<PATH>", dest="assets_dir",
         default="assets", help="Directory where cluster scripts and certs have been rendered. Default: assets")
+    parser_install.add_argument(
+        "--log-dir", metavar="<PATH>", dest="log_dir",
+        default="logs", help="Directory to which script execution "
+        "logs will be written. Default: logs")
     parser_install.set_defaults(handler=install)
 
     args = parser.parse_args()

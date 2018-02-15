@@ -391,23 +391,26 @@ class ClusterDefinition:
                     ))
 
 
-    def install(self, targeted_nodes=None):
+    def install(self, targeted_nodes=None, log_dir="logs"):
         """Runs the install scripts (over SSH) for the given list of nodes
         or for all nodes in the cluster definition if no nodes are specified.
 
         :param nodes: A list of node declarations  that are to be installed.
           May be `None`, in which case all nodes in the cluster definition
           are installed.
+        :param log_dir: The file system directory where the install script
+          execution logs will be written.
         """
         targeted_nodes = targeted_nodes or self.all_nodes()
         future_to_node = {}
         self._ensure_sshkeys_present(targeted_nodes)
         self._ensure_bootscripts_rendered(targeted_nodes)
+        os.makedirs(log_dir, exist_ok=True)
         with ThreadPoolExecutor(max_workers=20) as executor:
             for node in self.all_nodes():
                 if not node in targeted_nodes:
                     continue
-                node_installer = self._create_install_task(node)
+                node_installer = self._create_install_task(node, log_dir)
                 future_to_node[executor.submit(node_installer.run)] = node
 
             for future in concurrent.futures.as_completed(future_to_node):
@@ -442,9 +445,9 @@ class ClusterDefinition:
 
         return os.path.abspath(os.path.expanduser(key_path))
 
-    def _create_install_task(self, node):
+    def _create_install_task(self, node, log_dir):
         nodename = node["nodeName"]
-        log_path= nodename + ".log"
+        log_path= os.path.join(log_dir, nodename + ".log")
         ssh_key = self._ssh_login_key(node)
         LOG.debug("using ssh key: %s", ssh_key)
         script_path = self.script_path(nodename)
