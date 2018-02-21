@@ -43,8 +43,7 @@ CLUSTER_DEFAULTS = {
     # (Optional) A private SSH login key to use when connecting to nodes.
     # Can be overridden on a per-node basis (see below).
     "sshLoginKey": None,
-    # The list of master nodes in the cluster. A minimum of 3 masters is
-    # required.
+    # The list of master nodes in the cluster.
     "masters": None,
     # The list of worker nodes in the cluster.
     "workers": None,
@@ -132,7 +131,7 @@ class ClusterDefinition:
         if not isinstance(masters, list):
             raise ValueError("'masters' expected to be a list")
         if len(masters) < 3:
-            raise ValueError("masters: a minimum of 3 masters must be specified")
+            LOG.warn("a minimum of 3 masters is required for high-availability")
         for master in masters:
             try:
                 self._validate_node(master)
