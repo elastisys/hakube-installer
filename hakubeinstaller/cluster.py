@@ -320,7 +320,7 @@ class ClusterDefinition:
                 common_name=self.spec["etcdCACommonName"])
             proc = subprocess.run(cmd,shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             if proc.returncode != 0:
-                fail("failed to generate etcd CA cert: ".format(proc.stdout))
+                fail("failed to generate etcd CA cert: {}".format(proc.stdout))
 
         if overwrite_secrets or not self.etcd_client_rendered():
             LOG.info("generating etcd client cert under %s ...", self.etcd_pki_dir())
