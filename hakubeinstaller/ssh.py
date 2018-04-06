@@ -34,7 +34,8 @@ class SSHCommand:
                     scriptpath=self.script_path,
                     outpath=self.output_path)
         LOG.debug("ssh command: %s", sshcmd)
-        LOG.info("executing script against %s@%s (log at %s) ...",
+        LOG.info("executing script against %s@%s. this could take a few "
+                 "minutes, follow progress in %s ...",
                  self.username, self.host, self.output_path)
         proc = subprocess.run(
             [sshcmd], shell=True, stdout=subprocess.DEVNULL,
