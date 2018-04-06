@@ -52,11 +52,14 @@ The simplest way to get started is to try out a HA cluster on your local machine
    in [infra-providers/vagrant/README.md](infra-providers/vagrant/README.md) to
    create a cluster of local VMs fronted by a HAProxy load-balancer.
 
-0. Prepare the installer
+0. Prepare the installer: create a virtual environment, install the installer
+   and its dependencies and enter a sub-shell for the virtual environment:
 
-         python3 -m venv .venv
-         source .venv/bin/activate
-         pip install .
+         # optional: create virtualenv in $PWD instead of ~/.local/share/
+         export PIPENV_VENV_IN_PROJECT=true
+
+         pipenv install .
+         pipenv shell
 
 0. Run the installer script using
    the [vagrant-cluster.json](samples/vagrant-cluster.json).
@@ -194,16 +197,18 @@ A couple of sample cluster definitions are available under [samples](samples).
 
    - `bash`
    - Python 3.5+
-   - `pip`
+   - `pip` and [pipenv](http://pipenv.readthedocs.io/en/latest/)
    - [cfssl and cfssljson](https://pkg.cfssl.org/)
    - `ssh`
    - `ssh-keygen`
 
 0. Install software prerequisites for the installer in a virtual environment:
 
-        python3 -m venv .venv
-        . .venv/bin/activate
-        pip install .
+        # optional: create virtualenv in $PWD instead of ~/.local/share/
+        export PIPENV_VENV_IN_PROJECT=true
+
+        pipenv install --three
+        pipenv shell
 
 
 ## Render cluster assets
