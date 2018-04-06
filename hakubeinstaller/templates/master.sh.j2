@@ -80,7 +80,7 @@ cat $HOME/.ssh/authorized_keys | sudo tee -a /root/.ssh/authorized_keys > /dev/n
 #
 
 export ETCD_VERSION=v{{ cluster["etcdVersion"] }}
-curl -sSL https://storage.googleapis.com/etcd/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz | tar -xzv --strip-components=1 -C /tmp/
+curl -fsSL https://storage.googleapis.com/etcd/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz | tar -xzv --strip-components=1 -C /tmp/
 sudo mv /tmp/etcd* /usr/local/bin
 sudo chmod +x /usr/local/bin/etcd*
 
