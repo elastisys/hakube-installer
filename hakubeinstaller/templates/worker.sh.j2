@@ -38,8 +38,13 @@ discoveryTokenAPIServers:
 - {{ cluster["masterLoadBalancerAddress"] }}:6443
 EOL
 
-# will wait (indefinitely) for a master to become available
-sudo kubeadm join --config=kubeadm-config.yaml
+if curl -f http://localhost:10255/healthz > /dev/null; then
+    log INFO "kubelet already running, skipping kubeadm join ..."
+else
+    log INFO "running kubeadm join ..."
+	# will wait (indefinitely) for a master to become available
+    sudo kubeadm join --config=kubeadm-config.yaml
+fi
 
 
 #

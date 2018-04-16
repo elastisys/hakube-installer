@@ -209,12 +209,22 @@ apiServerExtraArgs:
   cloud-config: /etc/kubernetes/cloud-config.json
 {% endif %}
 controllerManagerExtraArgs:
+  # required if we want prometheus to be able to scrape (default: 127.0.0.1)
+  address: 0.0.0.0
 {% if cluster["hooks"].get("cloudProviderConfig") %}
   cloud-config: /etc/kubernetes/cloud-config.json
 {% endif %}
+schedulerExtraArgs:
+  # required if we want prometheus to be able to scrape (default: 127.0.0.1)
+  address: 0.0.0.0
 EOL
 
-sudo kubeadm init --config=kubeadm-config.yaml
+if curl -f http://localhost:10255/healthz > /dev/null; then
+    log INFO "kubelet already running, skipping kubeadm init ..."
+else
+    log INFO "running kubeadm init ..."
+    sudo kubeadm init --config=kubeadm-config.yaml
+fi
 
 # kubadm marks the node a master by setting the appropriate label
 # (node-role.kubernetes.io/master="") and taint
@@ -259,16 +269,20 @@ kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deplo
 #
 log INFO "installing pod network ..."
 kubever=$(kubectl version | base64 | tr -d '\n')
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+curl -fsSL "https://cloud.weave.works/k8s/net?k8s-version=$kubever" -o ~/weave.yaml
+kubectl apply -f ~/weave.yaml
 
 # Set permissive RBAC permissions to all service accounts.
 # Rationale: our cluster is assumed to be operated by trusted people, who
 # should be able to deploy any services that use any kind of cluster resources.
 # RBAC permissions quickly get hairy (example, ingress-controller) and
 # unnecessarily complicates software deployment on the cluster.
-kubectl create clusterrolebinding serviceaccounts-cluster-admin \
-  --clusterrole=cluster-admin \
-  --group=system:serviceaccounts
+if ! kubectl get clusterrolebinding serviceaccounts-cluster-admin > /dev/null; then
+    kubectl create clusterrolebinding serviceaccounts-cluster-admin \
+	    --clusterrole=cluster-admin \
+	    --group=system:serviceaccounts
+fi
+
 {% endif %}
 
 log INFO "bootscript completed."
