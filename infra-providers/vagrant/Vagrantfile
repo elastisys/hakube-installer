@@ -35,7 +35,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     lb.vm.network :forwarded_port, guest: 6443, host: 6443
     lb.vm.network :forwarded_port, guest: 6444, host: 6444
     # make hostname -i must return a routable address
-    lb.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master-lb/10.2.0.100 master-lb/' -i /etc/hosts"
+    lb.vm.provision :shell, :inline => "sed 's/127\..*master-lb/10.2.0.100 master-lb/' -i /etc/hosts"
     lb.vm.provision :shell, :path => "master-lb.sh", :args => []
   end
 
@@ -45,7 +45,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.network :private_network, ip: "10.2.0.10"
     # hostname -i must return a routable address on second (non-NATed) network interface
     # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
-    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master0/10.2.0.10 master0/' -i /etc/hosts"
+    master.vm.provision :shell, :inline => "sed 's/127\..*master0/10.2.0.10 master0/' -i /etc/hosts"
   end
 
   config.vm.define "master1" do |master|
@@ -53,7 +53,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.network :private_network, ip: "10.2.0.11"
     # hostname -i must return a routable address on second (non-NATed) network interface
     # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
-    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master1/10.2.0.11 master1/' -i /etc/hosts"
+    master.vm.provision :shell, :inline => "sed 's/127\..*master1/10.2.0.11 master1/' -i /etc/hosts"
   end
 
   config.vm.define "master2" do |master|
@@ -61,7 +61,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.network :private_network, ip: "10.2.0.12"
     # hostname -i must return a routable address on second (non-NATed) network interface
     # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
-    master.vm.provision :shell, :inline => "sed 's/127.0.0.1.*master2/10.2.0.12 master2/' -i /etc/hosts"
+    master.vm.provision :shell, :inline => "sed 's/127\..*master2/10.2.0.12 master2/' -i /etc/hosts"
   end
 
   config.vm.define "worker0" do |worker|
@@ -69,7 +69,23 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     worker.vm.network :private_network, ip: "10.2.0.20"
     # hostname -i must return a routable address on second (non-NATed) network interface
     # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
-    worker.vm.provision :shell, :inline => "sed 's/127.0.0.1.*worker0/10.2.0.20 worker0/' -i /etc/hosts"
+    worker.vm.provision :shell, :inline => "sed 's/127\..*worker0/10.2.0.20 worker0/' -i /etc/hosts"
+  end
+
+  config.vm.define "worker1" do |worker|
+    worker.vm.hostname = "worker1"
+    worker.vm.network :private_network, ip: "10.2.0.21"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    worker.vm.provision :shell, :inline => "sed 's/127\..*worker1/10.2.0.21 worker1/' -i /etc/hosts"
+  end
+
+  config.vm.define "worker2" do |worker|
+    worker.vm.hostname = "worker2"
+    worker.vm.network :private_network, ip: "10.2.0.22"
+    # hostname -i must return a routable address on second (non-NATed) network interface
+    # see http://kubernetes.io/docs/getting-started-guides/kubeadm/#limitations
+    worker.vm.provision :shell, :inline => "sed 's/127\..*worker2/10.2.0.22 worker2/' -i /etc/hosts"
   end
 
 end

@@ -26,6 +26,18 @@
             "privateIP": "10.2.0.20",
             "publicIP": "10.2.0.20",
             "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker1",
+            "privateIP": "10.2.0.21",
+            "publicIP": "10.2.0.21",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker2",
+            "privateIP": "10.2.0.22",
+            "publicIP": "10.2.0.22",
+            "sshLoginKey": "~/.ssh/id_rsa"
         }
     ],
 
