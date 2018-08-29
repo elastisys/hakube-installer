@@ -278,6 +278,7 @@ kubectl apply -f ~/weave.yaml
 # RBAC permissions quickly get hairy (example, ingress-controller) and
 # unnecessarily complicates software deployment on the cluster.
 if ! kubectl get clusterrolebinding serviceaccounts-cluster-admin > /dev/null; then
+    log INFO "enabling permissive mode: all service accounts bound to role cluster-admin ..."
     kubectl create clusterrolebinding serviceaccounts-cluster-admin \
 	    --clusterrole=cluster-admin \
 	    --group=system:serviceaccounts
