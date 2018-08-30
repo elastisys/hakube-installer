@@ -1,0 +1,37 @@
+{
+    "masterLoadBalancerAddress": "10.2.0.10",
+    "masters": [
+        {
+            "nodeName": "master0",
+            "privateIP": "10.2.0.10",
+            "publicIP": "10.2.0.10",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        }
+    ],
+    "workers": [
+        {
+            "nodeName": "worker0",
+            "privateIP": "10.2.0.20",
+            "publicIP": "10.2.0.20",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker1",
+            "privateIP": "10.2.0.21",
+            "publicIP": "10.2.0.21",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker2",
+            "privateIP": "10.2.0.22",
+            "publicIP": "10.2.0.22",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        }
+    ],
+
+    "hooks": {
+        "preinstall": null,
+        "cloudProvider": null,
+        "cloudProviderConfig": null
+    }
+}

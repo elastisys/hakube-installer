@@ -18,6 +18,8 @@ sudo apt-get update -y
 sudo apt-get install -y kubelet={{ cluster["kubernetesVersion"] }}-00 \
                         kubeadm={{ cluster["kubernetesVersion"] }}-00 \
                         kubectl={{ cluster["kubernetesVersion"] }}-00
+# prevent dist-upgrade from installing new versions of these packages
+sudo apt-mark hold kubelet kubeadm kubectl
 
 # Verify kubeadm installation
 kubeadm version

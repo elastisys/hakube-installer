@@ -887,6 +887,10 @@ output "master_private_ips" {
   value = "${aws_instance.masters.*.private_ip}"
 }
 
+output "master_private_dns" {
+  value = "${aws_instance.masters.*.private_dns}"
+}
+
 output "master_azs" {
   value = "${aws_instance.masters.*.availability_zone}"
 }
@@ -901,6 +905,10 @@ output "worker_public_ips" {
 
 output "worker_private_ips" {
   value = "${aws_instance.workers.*.private_ip}"
+}
+
+output "worker_private_dns" {
+  value = "${aws_instance.workers.*.private_dns}"
 }
 
 output "worker_azs" {

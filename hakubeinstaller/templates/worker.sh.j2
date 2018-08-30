@@ -46,17 +46,4 @@ else
     sudo kubeadm join --config=kubeadm-config.yaml
 fi
 
-
-#
-# On the worker, kube-proxy and kubelet needs to connect to apiserver through
-# the load-balancer. The configmap that configures the kube-proxy DaemonSet
-# should already have been updated on master init, but we need to re-write the
-# kubelet config to use the load-balancer (instead of the advertised IP of the
-# master that it happened to join).
-#
-# /etc/kubernetes/kubelet.conf may not be immediately present
-wait_for 60 [ -f /etc/kubernetes/kubelet.conf ]
-sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerAddress"] }}:6443#g' /etc/kubernetes/kubelet.conf
-sudo systemctl restart kubelet
-
 log INFO "bootscript completed."

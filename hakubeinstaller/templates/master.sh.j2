@@ -173,24 +173,48 @@ retrying_scp root@{{ cluster["masters"][0]["privateIP"] }} /etc/kubernetes/pki/f
 # Run kubeadm
 #
 cat > kubeadm-config.yaml <<EOL
-apiVersion: kubeadm.k8s.io/v1alpha1
+apiVersion: kubeadm.k8s.io/v1alpha2
 kind: MasterConfiguration
 kubernetesVersion: v{{ cluster["kubernetesVersion"] }}
-token: {{ cluster_token }}
-# Never expire token
-tokenTTL: 0s
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: {{ cluster_token }}
+  # Never expire token
+  ttl: 0s
 api:
-  # each apiserver advertises itself as a k8s endpoint
-  # needs to be combined with using the lease-based endpoint-reconciler
-  # see https://kubernetes.io/docs/admin/high-availability/#endpoint-reconciler
-  advertiseAddress: {{ master["privateIP"] }}
+  # Sets a stable IP address or DNS name for the control plane endpoint; it
+  # can be a valid IP address or a RFC-1123 DNS subdomain, both with
+  # optional TCP port.
+  # In a cluster with more than one control plane instances, this field
+  # should be assigned the address of the external load balancer in front
+  # of the control plane instances.
+  # This endpoint will be used by pods in the kube-proxy daemonset to connect
+  # to the apiserver. It is written by kubeadm to a generated kube-proxy
+  # configmap. It will also be written to the kubeadm-generated kubeconfig.
+  controlPlaneEndpoint: "{{ cluster["masterLoadBalancerAddress"] }}:6443"
+
+  # Each apiserver advertises itself as a separate k8s endpoint. This needs
+  # to be combined with using the lease-based endpoint-reconciler, which
+  # should be enabled in the apiserver by default.
+  advertiseAddress: "{{ master["privateIP"] }}"
+  bindPort: 6443
+
+clusterName: {{ cluster["clusterName"] }}
+certificatesDir: /etc/kubernetes/pki
 etcd:
-  endpoints:
+  external:
+    endpoints:
     # only connect to local etcd server
     - {{ "https://%s:2379" | format(master["privateIP"]) }}
-  caFile: /etc/kubernetes/pki/etcd/ca.pem
-  certFile: /etc/kubernetes/pki/etcd/client.pem
-  keyFile: /etc/kubernetes/pki/etcd/client-key.pem
+    caFile: /etc/kubernetes/pki/etcd/ca.pem
+    certFile: /etc/kubernetes/pki/etcd/client.pem
+    keyFile: /etc/kubernetes/pki/etcd/client-key.pem
+imageRepository: k8s.gcr.io
+kubeProxy:
+  config:
+kubeletConfiguration:
+  baseConfig:
 apiServerCertSANs:
 - 127.0.0.1
 - {{ master["privateIP"] }}
@@ -199,20 +223,37 @@ apiServerCertSANs:
 - {{ master_fqdn }}
 {% endfor %}
 networking:
+  dnsDomain: cluster.local
   podSubnet: 10.32.0.0/12
-{% if cluster["hooks"].get("cloudProvider") %}
-cloudProvider: {{ cluster["hooks"]["cloudProvider"] }}
-{% endif %}
+  serviceSubnet: 10.96.0.0/12
+# TODO: according to https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG-1.11.md#new-deprecations
+#       we should make use of out-of-tree cloud providers, but it is not
+#       clear from the docs how to achieve this. As a temporary workaround,
+#       we make use of legacy in-tree cloud providers (via arguments to the
+#       apiserver and controller-manager)
 apiServerExtraArgs:
-  endpoint-reconciler-type: lease
+{% if cluster["hooks"].get("cloudProvider") %}
+  cloud-provider: "{{ cluster["hooks"]["cloudProvider"] }}"
+{% endif %}
 {% if cluster["hooks"].get("cloudProviderConfig") %}
-  cloud-config: /etc/kubernetes/cloud-config.json
+  cloud-config: "/etc/kubernetes/cloud-config.json"
+apiServerExtraVolumes:
+- name: cloud
+  hostPath: "/etc/kubernetes/cloud-config.json"
+  mountPath: "/etc/kubernetes/cloud-config.json"
 {% endif %}
 controllerManagerExtraArgs:
   # required if we want prometheus to be able to scrape (default: 127.0.0.1)
   address: 0.0.0.0
+{% if cluster["hooks"].get("cloudProvider") %}
+  cloud-provider: "{{ cluster["hooks"]["cloudProvider"] }}"
+{% endif %}
 {% if cluster["hooks"].get("cloudProviderConfig") %}
-  cloud-config: /etc/kubernetes/cloud-config.json
+  cloud-config: "/etc/kubernetes/cloud-config.json"
+controllerManagerExtraVolumes:
+- name: cloud
+  hostPath: "/etc/kubernetes/cloud-config.json"
+  mountPath: "/etc/kubernetes/cloud-config.json"
 {% endif %}
 schedulerExtraArgs:
   # required if we want prometheus to be able to scrape (default: 127.0.0.1)
@@ -247,20 +288,9 @@ mkdir -p $HOME/.kube
 sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-
-#
-# kube-proxy (in particular on workers) needs to connect to the apiserver
-# through the load-balancer. The kube-proxy  DaemonSet reads its configuration
-# from a configmap, which is overwritten by every master 'kubeadm init'.
-#
-kubectl get configmap -n kube-system kube-proxy -o yaml > kube-proxy.cm
-sudo sed -i 's#server:.*#server: https://{{ cluster["masterLoadBalancerAddress"] }}:6443#g' kube-proxy.cm
-kubectl apply -f kube-proxy.cm --force
-# restart all kube-proxy pods to ensure that they load the new configmap
-kubectl delete pod -n kube-system -l k8s-app=kube-proxy
-
 # scale kube-dns to the number of masters running
-kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deployment/kube-dns
+log INFO "scaling coredns deployment ..."
+kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deployment/coredns
 
 
 {% if master == cluster["masters"][0] %}
