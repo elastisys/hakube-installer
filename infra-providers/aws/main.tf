@@ -196,7 +196,7 @@ locals {
   # These are only used when we create a new VPC (when ${vpc_id} is not set)
   vpc_name            = "${var.cluster_name}-vpc"
   vpc_gateway_name    = "${var.cluster_name}-vpc-gw"
-  route_table_name    = "${var.cluster_name}-vpc-rt"
+  route_table_name    = "${var.cluster_name}-rt"
 
   subnet_name_prefix   = "${var.cluster_name}-subnet"
   key_name             = "${var.cluster_name}-sshkey"
@@ -235,7 +235,7 @@ terraform {
 }
 
 provider "aws" {
-  version    = "~> 1.13"
+  version    = "~> 1.39"
 
   access_key = "${var.aws_access_key}"
   secret_key = "${var.aws_secret_key}"
@@ -277,19 +277,17 @@ resource "aws_internet_gateway" "gateway" {
   tags = { Name = "${local.vpc_gateway_name}" }
 }
 
-# get the main VPC route table
-data "aws_route_table" "main" {
+# create a route table, which will be set up to allow inbound/outbound internet
+# traffic to/from the cluster subnets
+resource "aws_route_table" "rt" {
   vpc_id = "${data.aws_vpc.vnet.id}"
-  filter {
-    name = "association.main"
-    values = ["true"]
-  }
+  tags = "${merge(local.cluster_tags, map("Name", "${local.route_table_name}"))}"
 }
 
 # Add a route to the VPC's main routing table, which allows traffic to/from
 # the Internet for subnets that are associated with the route-table.
 resource "aws_route" "outgoing_traffic_via_gateway" {
-  route_table_id = "${data.aws_route_table.main.id}"
+  route_table_id = "${aws_route_table.rt.id}"
   destination_cidr_block = "0.0.0.0/0"
   gateway_id = "${aws_internet_gateway.gateway.id}"
 }
@@ -319,7 +317,7 @@ resource "aws_route_table_association" "rtassociation" {
   count = "${length(keys(var.availability_zones))}"
 
   subnet_id      = "${aws_subnet.subnets.*.id[count.index]}"
-  route_table_id = "${data.aws_route_table.main.id}"
+  route_table_id = "${aws_route_table.rt.id}"
 }
 
 

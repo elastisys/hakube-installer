@@ -28,22 +28,20 @@ sudo chmod 600 $HOME/.ssh/id_rsa
 #
 # Run kubeadm
 #
-cat > kubeadm-config.yaml <<EOL
-apiVersion: kubeadm.k8s.io/v1alpha1
-kind: NodeConfiguration
-nodeName: {{ worker_name }}
-token: {{ cluster_token }}
-discoveryTokenUnsafeSkipCAVerification: true
-discoveryTokenAPIServers:
-- {{ cluster["masterLoadBalancerAddress"] }}:6443
-EOL
-
+sudo tee ~/kubeadm-config-worker.yaml > /dev/null <<EOF
+{% include "fragments/kubeadm-config-worker.yaml.j2" %}
+EOF
 if curl -f http://localhost:10255/healthz > /dev/null; then
     log INFO "kubelet already running, skipping kubeadm join ..."
 else
     log INFO "running kubeadm join ..."
-	# will wait (indefinitely) for a master to become available
-    sudo kubeadm join --config=kubeadm-config.yaml
+    # will wait (indefinitely) for a master to become available
+    sudo kubeadm join --config=kubeadm-config-worker.yaml 2>&1 | tee ~/kubeadm.log
+    exitcode="${PIPESTATUS[0]}"
+    if [ "${exitcode}" != 0 ]; then
+	log ERROR "kubeadm join failed with exitcode ${exitcode} ..."
+	exit ${exitcode}
+    fi
 fi
 
 log INFO "bootscript completed."

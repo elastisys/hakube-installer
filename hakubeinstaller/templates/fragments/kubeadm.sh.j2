@@ -24,14 +24,6 @@ sudo apt-mark hold kubelet kubeadm kubectl
 # Verify kubeadm installation
 kubeadm version
 
-# Pass additional arguments to kubelet
-sudo tee /etc/systemd/system/kubelet.service.d/20-extra-args.conf > /dev/null <<EOF
-{% include "fragments/kubelet-extra-args.conf.j2" %}
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl restart kubelet
-
 {% if cluster["hooks"].get("cloudProviderConfig") %}
 # Add cloud-provider config (if one is required by the cloudprovider)
 sudo tee /etc/kubernetes/cloud-config.json > /dev/null <<EOF

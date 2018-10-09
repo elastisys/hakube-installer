@@ -1,0 +1,19 @@
+apiVersion: kubeadm.k8s.io/v1alpha3
+kind: JoinConfiguration
+caCertPath: /etc/kubernetes/pki/ca.crt
+clusterName: "{{ cluster['clusterName'] }}"
+discoveryTimeout: 5m0s
+token: {{ cluster_token }}
+discoveryTokenAPIServers:
+- {{ cluster["masterLoadBalancerAddress"] }}:6443
+discoveryTokenUnsafeSkipCAVerification: true
+nodeRegistration:
+  name: "{{ worker_name }}"
+  kubeletExtraArgs:
+    cgroup-driver: systemd
+{% if cluster['hooks'].get('cloudProvider') %}
+    cloud-provider: {{ cluster['hooks']['cloudProvider'] }}
+{% endif %}
+{% if cluster['hooks'].get('cloudProviderConfig') %}
+    cloud-config: /etc/kubernetes/cloud-config.json
+{% endif %}

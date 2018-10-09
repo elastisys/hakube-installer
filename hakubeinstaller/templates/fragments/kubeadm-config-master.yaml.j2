@@ -1,0 +1,117 @@
+apiVersion: kubeadm.k8s.io/v1alpha3
+kind: InitConfiguration
+bootstrapTokens:
+- token: "{{ cluster_token }}"
+  description: "kubeadm bootstrap token"
+  # Never expire token
+  ttl: "0s"
+  groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  usages:
+  - signing
+  - authentication
+# NodeRegistrationOptions holds fields that relate to registering a new master
+# or node to the cluster, either via "kubeadm init" or "kubeadm join"
+nodeRegistration:
+  # `.Metadata.Name` of the Node API object to create in kubeadm init.
+  # Also used in the CommonName field of the kubelet's client cert.
+  # Defaults to the hostname of the node if not provided.
+  name: "{{ master_name }}"
+  kubeletExtraArgs:
+    cgroup-driver: systemd
+{% if cluster['hooks'].get('cloudProvider') %}
+    cloud-provider: {{ cluster['hooks']['cloudProvider'] }}
+{% endif %}
+{% if cluster['hooks'].get('cloudProviderConfig') %}
+    cloud-config: /etc/kubernetes/cloud-config.json
+{% endif %}
+apiEndpoint:
+  # Each apiserver advertises itself as a separate k8s endpoint. This needs
+  # to be combined with using the lease-based endpoint-reconciler, which
+  # should be enabled in the apiserver by default.
+  advertiseAddress: "{{ master['privateIP'] }}"
+  bindPort: 6443
+
+---
+
+apiVersion: kubeadm.k8s.io/v1alpha3
+kind: ClusterConfiguration
+clusterName: "{{ cluster['clusterName'] }}"
+kubernetesVersion: "v{{ cluster['kubernetesVersion'] }}"
+# Sets a stable IP address or DNS name for the control plane endpoint; it
+# can be a valid IP address or a RFC-1123 DNS subdomain, both with
+# optional TCP port.
+# In a cluster with more than one control plane instances, this field
+# should be assigned the address of the external load balancer in front
+# of the control plane instances.
+# This endpoint will be used by pods in the kube-proxy daemonset to connect
+# to the apiserver. It is written by kubeadm to a generated kube-proxy
+# configmap. It will also be written to the kubeadm-generated kubeconfig.
+controlPlaneEndpoint: "{{ cluster['masterLoadBalancerAddress'] }}:6443"
+apiServerCertSANs:
+- "127.0.0.1"
+- "{{ master['privateIP'] }}"
+- "{{ cluster['masterLoadBalancerAddress'] }}"
+{% for master_fqdn in cluster["masterFQDNs"] %}
+- "{{ master_fqdn }}"
+{% endfor %}
+# Where to store/look for certificates
+certificatesDir: "/etc/kubernetes/pki"
+etcd:
+  external:
+    endpoints:
+    # only connect to local etcd server
+    - {{ "https://%s:2379" | format(master["privateIP"]) }}
+    caFile: /etc/kubernetes/pki/etcd/ca.pem
+    certFile: /etc/kubernetes/pki/etcd/client.pem
+    keyFile: /etc/kubernetes/pki/etcd/client-key.pem
+imageRepository: k8s.gcr.io
+auditPolicy:
+  path: "/var/log/kubernetes/audit/audit.json"
+  logDir: "/var/log/kubernetes/audit"
+  logMaxAge: 2 # days
+networking:
+  dnsDomain: cluster.local
+  podSubnet: 10.32.0.0/12
+  serviceSubnet: 10.96.0.0/12
+apiServerExtraArgs:
+{% if cluster["hooks"].get("cloudProvider") %}
+  cloud-provider: "{{ cluster['hooks']['cloudProvider'] }}"
+{% endif %}
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+  cloud-config: "/etc/kubernetes/cloud-config.json"
+apiServerExtraVolumes:
+- name: cloud
+  hostPath: "/etc/kubernetes/cloud-config.json"
+  mountPath: "/etc/kubernetes/cloud-config.json"
+{% endif %}
+controllerManagerExtraArgs:
+  # controller-manager needs to know cluster name to handle cloud resources
+  # (such as ELBs)
+  cluster-name: "{{ cluster['clusterName'] }}"
+  # required if we want prometheus to be able to scrape (default: 127.0.0.1)
+  address: 0.0.0.0
+{% if cluster["hooks"].get("cloudProvider") %}
+  cloud-provider: "{{ cluster['hooks']['cloudProvider'] }}"
+{% endif %}
+{% if cluster["hooks"].get("cloudProviderConfig") %}
+  cloud-config: "/etc/kubernetes/cloud-config.json"
+controllerManagerExtraVolumes:
+- name: cloud
+  hostPath: "/etc/kubernetes/cloud-config.json"
+  mountPath: "/etc/kubernetes/cloud-config.json"
+{% endif %}
+schedulerExtraArgs:
+  # required if we want prometheus to be able to scrape (default: 127.0.0.1)
+  address: 0.0.0.0
+
+---
+
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+address: 0.0.0.0
+cgroupDriver: systemd
+clusterDNS:
+- 10.96.0.10
+clusterDomain: cluster.local
+staticPodPath: /etc/kubernetes/manifests

@@ -57,7 +57,7 @@ CLUSTER_DEFAULTS = {
     # (Optional) The docker version to use.
     "dockerVersion": "17.03.2~ce-0~ubuntu-xenial",
     # (Optional) The Kubernetes version to use.
-    "kubernetesVersion": "1.11.2",
+    "kubernetesVersion": "1.12.1",
     # (Optional) The etcd version to use. Preferred versions are:
     # k8s 1.11 => 3.2.18+, k8s 1.10 => 3.2.14+, k8s 1.9 => v3.1.10+,
     # k8s 1.8 => v3.0.17.
