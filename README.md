@@ -141,6 +141,12 @@ permitted by the json parser.**
     # be written.
     "scriptsDir": "scripts",
 
+    # (Optional) The address range (in CIDR notation) to use for the pod
+    # network. Note that this setting may require adjustment depending on the
+    # chosen network provider (.hooks.networkProvider)
+    "podNetworkCIDR": "10.32.0.0/12",
+
+
     # The list of master nodes in the cluster.
     "masters": [
         {
@@ -193,7 +199,14 @@ permitted by the json parser.**
         # A cloud-config to be used to configure the specified cloudprovider.
         # Some cloudproviders (aws) do not require a configuration file.
         # Assumed to be a fragment located under templates/hooks/cloudconfig/
-        "cloudProviderConfig": null
+        "cloudProviderConfig": null,
+        # The name of a bash script used to set up a pod network provider once
+        # kubeadm has installed the control plane. The script will run on a
+        # master node with kubectl set up to talk to the apiserver. A script
+        # fragment must be located under templates/hooks/network/<name>.sh.j2
+        # Depending on the specifics of the network provider, you may need to
+        # adjust the value of .podNetworkCIDR.
+        "networkProvider": "weave"
     }
 }
 ```

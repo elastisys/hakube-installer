@@ -1,0 +1,52 @@
+{
+    "masterLoadBalancerAddress": "10.2.0.100",
+    "masters": [
+        {
+            "nodeName": "master0",
+            "privateIP": "10.2.0.10",
+            "publicIP": "10.2.0.10",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "master1",
+            "privateIP": "10.2.0.11",
+            "publicIP": "10.2.0.11",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "master2",
+            "privateIP": "10.2.0.12",
+            "publicIP": "10.2.0.12",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        }
+    ],
+    "workers": [
+        {
+            "nodeName": "worker0",
+            "privateIP": "10.2.0.20",
+            "publicIP": "10.2.0.20",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker1",
+            "privateIP": "10.2.0.21",
+            "publicIP": "10.2.0.21",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        },
+        {
+            "nodeName": "worker2",
+            "privateIP": "10.2.0.22",
+            "publicIP": "10.2.0.22",
+            "sshLoginKey": "~/.ssh/id_rsa"
+        }
+    ],
+
+    "podNetworkCIDR": "192.168.0.0/16",
+    
+    "hooks": {
+        "preinstall": null,
+        "cloudProvider": null,
+        "cloudProviderConfig": null,
+        "networkProvider": "calico"
+    }
+}

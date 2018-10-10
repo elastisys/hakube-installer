@@ -80,6 +80,11 @@ CLUSTER_DEFAULTS = {
     # be written.
     "scriptsDir": "scripts",
 
+    # The address range (in CIDR notation) to use for the pod network.
+    # Note that this setting may require adjustment depending on the chosen
+    # network provider (.hooks.networkProvider)
+    "podNetworkCIDR": "10.32.0.0/12",
+
     "hooks": {
         # The name of a script to include as the first step in the generated
         # boot scripts, and will therefore run prior to anything else.
@@ -92,7 +97,14 @@ CLUSTER_DEFAULTS = {
         # A cloud-config to be used to configure the specified cloudprovider.
         # Some cloudproviders (aws) do not require a configuration file.
         # Assumed to be a fragment located under templates/hooks/cloudconfig/
-        "cloudProviderConfig": None
+        "cloudProviderConfig": None,
+        # The name of a bash script used to set up a pod network provider once
+        # kubeadm has installed the control plane. The script will run on a
+        # master node with kubectl set up to talk to the apiserver. A script
+        # fragment must be located under templates/hooks/network/<name>.sh.j2
+        # Depending on the specifics of the network provider, you may need to
+        # adjust the value of .podNetworkCIDR.
+        "networkProvider": "weave"
     }
 }
 """Represents default cluster spec values."""
@@ -156,6 +168,9 @@ class ClusterDefinition:
                     raise ValueError("worker '{}': {}".format(worker.get("nodeName"), str(e)))
 
         self._validate_unique_node_names(*masters, *workers)
+
+        if not self.spec["hooks"].get("networkProvider"):
+            raise ValueError("no hooks.networkProvider specified")
 
 
     def _validate_node(self, node_def):

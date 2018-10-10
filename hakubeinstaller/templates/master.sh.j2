@@ -221,10 +221,7 @@ kubectl scale --replicas={{ cluster["masters"]  | length }} -n kube-system deplo
 #
 # Setup pod network
 #
-log INFO "installing pod network ..."
-kubever=$(kubectl version | base64 | tr -d '\n')
-curl -fsSL "https://cloud.weave.works/k8s/net?k8s-version=$kubever" -o ~/weave.yaml
-kubectl apply -f ~/weave.yaml
+{% include "hooks/network/" + cluster["hooks"]["networkProvider"] + ".sh.j2" %}
 
 # Set permissive RBAC permissions to all service accounts.
 # Rationale: our cluster is assumed to be operated by trusted people, who
