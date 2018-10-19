@@ -1,0 +1,10 @@
+
+#
+# NOTE: for weave to work properly, a pod network CIDR of 10.32.0.0/12
+#       should be used.
+#
+
+log INFO "installing weave network ..."
+kubever=$(kubectl version | base64 | tr -d '\n')
+curl -fsSL "https://cloud.weave.works/k8s/net?k8s-version=$kubever" -o ~/weave.yaml
+kubectl apply -f ~/weave.yaml

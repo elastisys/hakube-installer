@@ -1,0 +1,13 @@
+
+#
+# NOTE: for Calico to work properly, a pod network CIDR of 192.168.0.0/16
+#       should be used.
+#
+
+log INFO "installing calico network ..."
+
+curl -fsSL "https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml" -o ~/calico-rbac.yaml
+curl -fsSL "https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml" -o ~/calico.yaml
+
+kubectl apply -f ~/calico-rbac.yaml
+kubectl apply -f ~/calico.yaml
