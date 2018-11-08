@@ -5,7 +5,7 @@ installer for a highly available Kubernetes cluster with a configurable number
 of master and worker nodes. HA is on the roadmap for `kubeadm` and this script
 should be considered a workaround until `kubeadm` is HA-capable. This installer
 is largely based on
-[Creating HA clusters with kubeadm](https://kubernetes.io/docs/setup/independent/high-availability/).
+[Creating HA clusters with kubeadm](https://v1-10.docs.kubernetes.io/docs/setup/independent/high-availability/).
 
 The installer should run on any Linux system which meets the software
 prerequisites outlined below.
